@@ -1,0 +1,337 @@
+/**
+ * @fileOverview Regular expression grammar parsers.
+ */
+package (
+    pattern,
+    
+    evaluate)
+with
+    import 'parse/parse' parse {
+        always,
+        attempt,
+        bind,
+        binds,
+        choice,
+        choicea,
+        either,
+        enumeration,
+        many,
+        many1,
+        next,
+        optional,
+        rec,
+        sequence,
+        test,
+        token},
+    import 'parse/lang' {between, sepBy, sepEndBy, times, then},
+    import 'parse/text' {character, characters, string},
+    import 'nu/stream' {foldl, map, toArray},
+    import 'nu/gen' gen,
+    import 'parse_re/match' match
+in {
+
+var identity = \x -> x;
+
+var constant = \x -> \() -> x;
+
+var join = (foldl, (+), '');
+
+var fromCharCodeParser =
+    join
+    \> \x -> parseInt(x, 16)
+    \> String.fromCharCode
+    \> always;
+
+/* Forward
+ ******************************************************************************/
+var disjunction = \args(...) -> disjunction.apply(null, args);
+
+var classRanges = \args(...) -> classRanges.apply(null, args);
+
+/* Escapes
+ ******************************************************************************/
+var decimalDigit = characters('0123456789');
+
+var decimalDigits = bind(
+    many1(decimalDigits),
+    \x -> (x
+        |> join
+        |> parseInt
+        |> always));
+
+var decimalIntegerLiteral = bind(decimalDigits, parseInt \> always);
+
+/* 
+ ******************************************************************************/
+var reChar = always <\ character;
+
+var classChar = \c ->
+    bind(
+        c,
+        always <\ match.character);
+
+
+/* Escapes
+ ******************************************************************************/
+var hexDigit = characters('0123456789abcdefABCDEF');
+
+var hexEscapeSequence = next(
+    character('x'),
+    bind(times(2, hexDigit),
+        fromCharCodeParser));
+
+var unicodeEscapeSequence = next(
+    character('u'),
+    bind(times(4, hexDigit),
+        fromCharCodeParser));
+
+var decimalEscape = decimalIntegerLiteral;
+
+var characterClassEscape = characters('dDsSwW');
+
+var identityEscape = parse.anyToken; //TODO
+
+/**
+ * 
+ */
+var controlLetter = bind(
+    characters('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'),
+    \x -> let
+        i = x.charCodeAt(0),
+        j = i % 32
+    in
+        always(character(String.fromCharCode(j))));
+
+var controlEscape = let
+    map = \from, to ->
+        bind(
+            character(from),
+            constant <| reChar(to))
+in
+    choice(
+        map('t', '\u0009'),
+        map('n', '\u000A'),
+        map('v', '\u000B'),
+        map('f', '\u000C'),
+        map('r', '\u000D'));
+        
+var characterEscape = choice(
+    controlEscape,
+    next(
+        character('c'),
+        controlLetter),
+    hexEscapeSequence,
+    unicodeEscapeSequence,
+    identityEscape);
+
+var classEscape = choice(
+    decimalEscape,
+    character('b'),
+    characterEscape,
+    characterClassEscape);
+
+
+
+/* Parsers
+ ******************************************************************************/
+var classAtomNoDash = choice(
+    token((!) <\ (test, characters('\\-]'))),
+    next(
+        character('\\'),
+        classEscape));
+
+var classAtom = choice(
+    character('-'),
+    classAtomNoDash);
+
+var nonEmptyClassRangesNoDash = rec(\nonEmptyClassRangesNoDash ->
+    choice(
+        attempt <| enumeration(
+            then(
+                classAtomNoDash,
+                character('-')),
+            classAtom,
+            classRanges),
+        attempt <| binds(
+            enumeration(
+                classChar(classAtomNoDash),
+                nonEmptyClassRangesNoDash),
+            always <<\ match.choicea),
+            classChar(classAtom)));
+
+
+var nonEmptyClassRanges = let
+    classRange = binds(
+        enumeration(
+            then(
+                classAtom,
+                character('-')),
+            classAtom),
+        always <<\ match.characterRange)
+in
+    choice(
+        attempt <| binds(
+            enumeration(
+                classRange,
+                classRanges),
+            always <\ match.choicea),
+        attempt <| binds(
+            enumeration(
+                classChar(classAtom),
+                nonEmptyClassRangesNoDash),
+            always <<\ match.choicea),
+            classChar(classAtom));
+
+/**
+ * 
+ */
+classRanges = choice(
+    nonEmptyClassRanges,
+    always(''));
+
+/**
+ * 
+ */
+var characterClass = between(character('['), character(']'),
+    choice(
+        bind(
+            next(character('^'), classRanges),
+            \range -> always(token((!) <\ (test, range)))),
+        bind(
+            classRanges,
+            \range -> always(token((test, range))))));
+
+var atomEscape = choice(
+    decimalEscape,
+    characterEscape,
+    characterClassEscape);
+
+var patternCharacter = token(\tok -> {
+    switch (tok) {
+        case '^':
+        case '$':
+        case '\\':
+        case '.':
+        case '*':
+        case '+':
+        case '?':
+        case '(':
+        case ')':
+        case '[':
+        case ']':
+        case '{':
+        case '}':
+        case '|':
+            return false;
+        default:
+            return true;
+    }
+});
+
+var atom = choice(
+    bind(patternCharacter, always <\ match.character),
+    next(character('.'), always(match.anyCharacter)),
+    bind(
+        next(character('\\'), atomEscape),
+        \x -> always(match.character(x))),
+    characterClass,
+    between(character('('), character(')'),
+        choice(
+            next(
+                parse.optional(null, string('?:')),
+                disjunction),
+            disjunction)));
+
+/**
+ * 
+ */
+var quantifierPrefix = choice(
+    next(
+        character('*'),
+        always([0, Infinity, true])),
+    next(
+        character('+'),
+        always([1, Infinity, true])),
+    next(
+        character('?'),
+        always(0, 1, true)),
+    between(character('{'), character('}'),
+        binds(
+            enumeration(
+                next(
+                    decimalDigits,
+                    optional(null, character(','))),
+                optional(Infinity, decimalDigits)),
+            \lower, upper -> always([lower, upper, true]))));
+
+/**
+ * 
+ */
+var quantifier = binds(
+    enumeration(
+        quantifierPrefix,
+        optional(false, character('?'))),
+    \[min, max], lazy ->
+        always(lazy ?
+            (match.atLeast, min) :
+            (match.between, min, max)));
+
+/**
+ * 
+ */
+var assertion = choice(
+    next(
+        character('^'),
+        always(match.eof)),
+        
+    next(
+        character('$'),
+        always(match.bof)),
+        
+    attempt <| string('\\b'),
+    
+    string('\\B'),
+    
+    between(character('('), character(')'),
+        bind(
+            either(
+                next(attempt <| string('?='), always(match.assert)),
+                next(attempt <| string('?!'), always(match.assertNot))),
+            \x -> bind(disjunction, always <\ x))));
+
+/**
+ * 
+ */
+var term = choice(
+    assertion,
+    binds(
+        enumeration(
+            atom,
+            optional(identity, quantifier)),
+        \atom, quantifier ->
+            always(quantifier(atom))));
+
+/**
+ * 
+ */
+var alternative = bind(
+    many(term),
+    always <\ match.sequence);
+
+/**
+ * 
+ */
+disjunction = bind(
+    sepBy(character('|'),
+        alternative),
+    always <\ match.choice);
+
+/**
+ * 
+ */
+pattern = disjunction;
+
+
+evaluate = (parse.run, pattern);
+
+}

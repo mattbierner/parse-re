@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Parse Re Tests</title>
+    <link rel="stylesheet" href="resources/qunit-1.9.0.css">
+</head>
+
+<body lang="en">
+    <div id="qunit"></div>
+    
+    <script src="resources/qunit-1.9.0.js"></script>
+    <script type="application/javascript" src="../resources/require.js"></script>
+    <script type="application/javascript">
+        requirejs.config({
+            paths: {
+                'parse': '../dependencies/parse/lib',
+                'nu': '../dependencies/nu/lib',
+                'seshat': '../dependencies/seshat/lib/seshat',
+                
+                'parse_re': '../dist'
+            }
+        });
+        require(
+            ['testAtom',
+            'testCharacterClass'],
+            function() {
+                Array.prototype.forEach.call(arguments, function(m){
+                    m.module && module(m.module);
+                    m.tests.forEach(function(e){ test.apply(this, e); });
+            });
+        });
+    </script>
+
+</body>
+    
+</html>

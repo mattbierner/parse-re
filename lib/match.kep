@@ -1,0 +1,164 @@
+/**
+ * 
+ */
+package (
+    bof,
+    eof,
+    character,
+    characterRange,
+    anyCharacter,
+    
+    assert,
+    assertNot,
+    
+    choice,
+    choicea,
+    sequence,
+    
+    times,
+    between,
+    atMost,
+    atLeast,
+    
+// Running
+    exec)
+with
+    import 'parse/parse' parse {
+        always,
+        attempt,
+        bind,
+        binds,
+        either,
+        enumeration,
+        fail,
+        lookahead,
+        many,
+        many1,
+        next,
+        test,
+        token},
+    import 'parse/lang' lang {sepBy, sepEndBy, then},
+    import 'parse/text' text {characters, match, string},
+    import 'nu/stream' stream {foldl, map, toArray},
+    import 'nu/gen' gen
+in {
+
+var args = \args(...) -> args;
+
+var join = (foldl, (+), '');
+
+var fromCharCodeParser =
+    join
+    \> \x -> parseInt(x, 16)
+    \> String.fromCharCode
+    \> always;
+
+var not = \m -> 
+    either(
+        next(attempt <| m, fail()),
+        always());
+
+/* State
+ ******************************************************************************/
+var State = function(group, endIndex, captures) {
+    this.group = group;
+    this.endIndex = endIndex;
+    this.captures = captures;
+};
+
+State.setGroup = \s, x ->
+    new State(x, s.endIndex, s.captures);
+
+State.setEndIndex = \s, x ->
+    new State(s.group, x, s.captures);
+
+State.setCaptures = \s, x ->
+    new State(s.group, s.endIndex, x);
+
+/* Assertions
+ ******************************************************************************/
+/**
+ * 
+ */
+bof = bind(
+    parse.getPosition,
+    \pos -> pos === 0 ? always() : fail());
+
+eof = parse.eof;
+
+/**
+ * Check the input matches a parser without consuming any input.
+ */
+assert = lookahead;
+
+/**
+ * Check the input does not match a parser without consuming any input.
+ */
+assertNot = assert <\ not;
+
+//wordBoundary = 
+
+/* Parsers
+ ******************************************************************************/
+/**
+ * Match a single character
+ */
+character = text.character;
+
+/**
+ * Match a character in a range.
+ */
+characterRange = \start, end ->
+    (gen.range(start.charCodeAt(0), end.charCodeAt(0) + 1, 1)
+        |> (map, String.fromCharCode)
+        |> (foldl, (+), '')
+        |> text.characters);
+
+/**
+ * Match a single character
+ */
+anyCharacter = text.anyCharacter;
+
+/**
+ * Match the first of 1 or more patterns.
+ * 
+ * @param s Stream of patterns.
+ */
+choice = (map, attempt)
+    \> toArray
+    \> parse.choicea;
+
+/**
+ * 
+ */
+choicea = args
+    \>> parse.choicea;
+
+/* Quantifiers
+ ******************************************************************************/
+sequence = toArray
+    \> parse.enumerationa
+    \> parse.eager;
+
+times = lang.times;
+
+between = lang.betweenTimes;
+
+atMost = \max, p ->
+    between(0, max, p);
+
+atLeast = \min, p ->
+    between(min, Infinity, p);
+
+/* Running
+ ******************************************************************************/
+exec = \pattern, input ->
+    parse.parse(
+        pattern,
+        input,
+        new State(0, null, []),
+        \x -> x,
+        \ -> null);
+
+
+}
