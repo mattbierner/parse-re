@@ -43,7 +43,7 @@ with
         token},
     import 'parse/lang' lang {sepBy, sepEndBy, then},
     import 'parse/text' text {characters, match, string},
-    import 'nu/stream' stream {foldl, map, toArray},
+    import 'nu/stream' stream {first, rest, foldl, map, toArray},
     import 'nu/gen' gen
 in {
 
@@ -83,20 +83,49 @@ var not = \m ->
 
 /* State
  ******************************************************************************/
-var State = function(group, endIndex, captures) {
+var State = function(input, position, userState, previous) {
+    parse.ParserState.call(this, input, position, userState);
+    this.previous = previous;
+};
+State.prototype = new parse.ParserState;
+
+State.prototype.next = \x -> {
+    if (!this._next) {
+        var s = new State(
+            rest(this.input),
+            this.position.increment(x),
+            this.userState,
+            x);
+        this._next = \_, m, cok -> cok(x, s, m);
+    }
+    return this._next;
+};
+
+State.prototype.setInput = \input ->
+    new State(input, this.position, this.userState, this.previous);
+
+State.prototype.setPosition = \position ->
+    new State(this.input, position, this.userState, this.previous);
+
+State.prototype.setUserState = \userState ->
+    new State(this.input, this.position, userState, this.previous);
+
+/* Data
+ ******************************************************************************/
+var Data = function(group, endIndex, captures) {
     this.group = group;
     this.endIndex = endIndex;
     this.captures = captures;
 };
 
-State.setGroup = \s, x ->
-    new State(x, s.endIndex, s.captures);
+Data.setGroup = \s, x ->
+    new Data(x, s.endIndex, s.captures);
 
-State.setEndIndex = \s, x ->
-    new State(s.group, x, s.captures);
+Data.setEndIndex = \s, x ->
+    new Data(s.group, x, s.captures);
 
-State.setCaptures = \s, x ->
-    new State(s.group, s.endIndex, x);
+Data.setCaptures = \s, x ->
+    new Data(s.group, s.endIndex, x);
 
 /* Assertions
  ******************************************************************************/
@@ -187,10 +216,9 @@ atLeast = joinP <<\ lang.times;
 /* Running
  ******************************************************************************/
 exec = \pattern, input ->
-    parse.parse(
+    parse.parseState(
         pattern,
-        input,
-        new State(0, null, []),
+        new State(stream.from(input), parse.Position.initial, new Data(0, null, []), null),
         \x -> [x],
         \ -> null);
 

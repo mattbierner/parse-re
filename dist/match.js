@@ -29,6 +29,8 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         match = text["match"],
         string = text["string"],
         stream = stream,
+        first = stream["first"],
+        rest = stream["rest"],
         foldl = stream["foldl"],
         map = stream["map"],
         toArray = stream["toArray"],
@@ -78,19 +80,43 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     var not = (function(m) {
         return either(next(attempt(m), fail()), always());
     });
-    var State = (function(group, endIndex, captures) {
+    var State = (function(input, position, userState, previous) {
+        parse.ParserState.call(this, input, position, userState);
+        (this.previous = previous);
+    });
+    (State.prototype = new(parse.ParserState)());
+    (State.prototype.next = (function(x) {
+        if (!this._next) {
+            var s = new(State)(rest(this.input), this.position.increment(x), this.userState, x);
+            (this._next = (function(_, m, cok) {
+                return cok(x, s, m);
+            }));
+        }
+
+        return this._next;
+    }));
+    (State.prototype.setInput = (function(input) {
+        return new(State)(input, this.position, this.userState, this.previous);
+    }));
+    (State.prototype.setPosition = (function(position) {
+        return new(State)(this.input, position, this.userState, this.previous);
+    }));
+    (State.prototype.setUserState = (function(userState) {
+        return new(State)(this.input, this.position, userState, this.previous);
+    }));
+    var Data = (function(group, endIndex, captures) {
         (this.group = group);
         (this.endIndex = endIndex);
         (this.captures = captures);
     });
-    (State.setGroup = (function(s, x) {
-        return new(State)(x, s.endIndex, s.captures);
+    (Data.setGroup = (function(s, x) {
+        return new(Data)(x, s.endIndex, s.captures);
     }));
-    (State.setEndIndex = (function(s, x) {
-        return new(State)(s.group, x, s.captures);
+    (Data.setEndIndex = (function(s, x) {
+        return new(Data)(s.group, x, s.captures);
     }));
-    (State.setCaptures = (function(s, x) {
-        return new(State)(s.group, s.endIndex, x);
+    (Data.setCaptures = (function(s, x) {
+        return new(Data)(s.group, s.endIndex, x);
     }));
     (bof = bind(parse.getPosition, (function(pos) {
         return ((pos === 0) ? always() : fail());
@@ -159,7 +185,7 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         });
     })(joinP, lang.times));
     (exec = (function(pattern, input) {
-        return parse.parse(pattern, input, new(State)(0, null, []), (function(x) {
+        return parse.parseState(pattern, new(State)(stream.from(input), parse.Position.initial, new(Data)(0, null, []), null), (function(x) {
             return [x];
         }), (function() {
             return null;

@@ -33,8 +33,14 @@ function(re,
             ["Simple Multiple Atoms",
             function(){
                 var p = re.evaluate("ab");
-                var result = match.exec(p, 'ab');
-                assert.deepEqual(result, ['ab']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'ab'),
+                    ['ab']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'a'),
+                    null);
             }],
             
             ["Any Atom",

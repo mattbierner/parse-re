@@ -24,7 +24,9 @@
         require(
             ['testAtom',
             'testCharacterClass',
-            'testQuantifier'],
+            'testQuantifier',
+            'testEof',
+            'testBof'],
             function() {
                 Array.prototype.forEach.call(arguments, function(m){
                     m.module && module(m.module);

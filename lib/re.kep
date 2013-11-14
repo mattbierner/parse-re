@@ -303,7 +303,7 @@ var assertion = choice(
     next(
         character('^'),
         always(match.eof)),
-        
+    
     next(
         character('$'),
         always(match.bof)),
