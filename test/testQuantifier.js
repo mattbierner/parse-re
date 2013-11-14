@@ -90,6 +90,14 @@ function(re,
                     match.exec(p, 'aabaa'),
                     ['a']);
             }],
+            ["Lazy + consumes as many as required",
+            function(){
+                var p = re.evaluate("a+?b");
+                
+                assert.deepEqual(
+                    match.exec(p, 'aabaa'),
+                    ['aab']);
+            }],
             ["Lazy *",
             function(){
                 var p = re.evaluate("a*?");
@@ -114,9 +122,9 @@ function(re,
                     match.exec(p, 'aabaa'),
                     ['']);
             }],
-            ["Simple ?",
+            ["Lazy ?",
             function(){
-                var p = re.evaluate("a?");
+                var p = re.evaluate("a??");
                 
                 assert.deepEqual(
                     match.exec(p, ''),
@@ -128,11 +136,19 @@ function(re,
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
-                    ['a']);
+                    ['']);
                 
                 assert.deepEqual(
                     match.exec(p, 'aa'),
-                    ['a']);
+                    ['']);
+            }],
+            ["Lazy ? consumes as many as required",
+            function(){
+                var p = re.evaluate("a??b");
+                
+                assert.deepEqual(
+                    match.exec(p, 'ab'),
+                    ['ab']);
             }],
         ],
     };

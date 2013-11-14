@@ -95,6 +95,12 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
             }));
         }));
     });
+    var matchBof = bind(getState, (function(s) {
+        return always(((s & RE_M) ? match.bol : match.bof));
+    }));
+    var matchEof = bind(getState, (function(s) {
+        return always(((s & RE_M) ? match.eol : match.eof));
+    }));
     var hexDigit = characters("0123456789abcdefABCDEF");
     var hexEscapeSequence = next(character("x"), bind(times(2, hexDigit), fromCharCodeParser));
     var unicodeEscapeSequence = next(character("u"), bind(times(4, hexDigit), fromCharCodeParser));
@@ -209,9 +215,9 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     var quantifier = binds(enumeration(quantifierPrefix, optional(false, character("?"))), (function(__a, lazy) {
         var min = __a[0],
             max = __a[1];
-        return always((lazy ? match.atLeast.bind(null, min) : match.between.bind(null, min, max)));
+        return always((lazy ? match.betweenNonGreedy.bind(null, min, max) : match.between.bind(null, min, max)));
     }));
-    var assertion = choice(next(character("^"), always(match.eof)), next(character("$"), always(match.bof)), attempt(string("\\b")), string("\\B"), between(character("("), character(")"), bind(either(next(attempt(string("?=")), always(match.assert)), next(attempt(string("?!")), always(match.assertNot))), (function(x) {
+    var assertion = choice(next(character("^"), matchBof), next(character("$"), matchEof), next(string("\\b"), always(match.wordBoundary)), next(string("\\B"), always(match.notWordBoundary)), between(character("("), character(")"), bind(either(next(attempt(string("?=")), always(match.assert)), next(attempt(string("?!")), always(match.assertNot))), (function(x) {
         return bind(disjunction, (function(f, g) {
             return (function(x) {
                 return f(g(x));

@@ -3,7 +3,9 @@
  */
 package (
     bof,
+    bol,
     eof,
+    eol,
     
     character,
     characteri,
@@ -13,6 +15,8 @@ package (
     
     assert,
     assertNot,
+    wordBoundary,
+    notWordBoundary,
     
     choice,
     choicea,
@@ -20,6 +24,7 @@ package (
     
     times,
     between,
+    betweenNonGreedy,
     atMost,
     atLeast,
     
@@ -51,6 +56,8 @@ var args = \args(...) -> args;
 
 var join = (foldl, (+), '');
 
+var contains = \a, x -> Array.prototype.indexOf.call(a, x) !== -1;
+
 var joinP = \p -> bind(p, always <\ join);
 
 var toLowerCase =  Function.prototype.call.bind(String.prototype.toLowerCase);
@@ -68,6 +75,11 @@ var isLineTerminator = \x -> {
     }
 };
 
+var isWordChar = let
+    wordChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
+in
+    (contains, wordChars);
+
 /* 
  ******************************************************************************/
 var fromCharCodeParser =
@@ -80,6 +92,8 @@ var not = \m ->
     either(
         next(attempt <| m, fail()),
         always());
+
+var previous = parse.extract(\x -> x.previous);
 
 /* State
  ******************************************************************************/
@@ -134,9 +148,26 @@ Data.setCaptures = \s, x ->
  */
 bof = bind(
     parse.getPosition,
-    \pos -> pos === 0 ? always() : fail());
+    \pos -> pos.index === 0 ? always('') : fail());
 
-eof = parse.eof;
+bol = either(
+    bof,
+    bind(previous, \prev ->
+        isLineTerminator(prev) ? always('') : fail()));
+
+/**
+ * 
+ */
+eof = next(
+    parse.eof,
+    always(''));
+
+eol = either(
+    eof,
+    next(
+        lookahead <| token(isLineTerminator),
+        always('')));
+
 
 /**
  * Check the input matches a parser without consuming any input.
@@ -148,7 +179,16 @@ assert = lookahead;
  */
 assertNot = assert <\ not;
 
-//wordBoundary = 
+/**
+ * 
+ */
+wordBoundary = bind(previous, \p ->
+    assert(token(\c ->
+        isWordChar(c) && !isWordChar(p) ?
+            always():
+            fail())));
+
+notWordBoundary = not <| wordBoundary;
 
 /* Parsers
  ******************************************************************************/
@@ -208,10 +248,24 @@ sequence = toArray
 
 between = joinP <<\ lang.betweenTimes;
 
+/**
+ * @TODO: pretty damn ugly. 
+ */
 atMost = \max, p ->
-    between(0, max, p);
+    (max === 0 ? always(stream.end) :
+        \state, m, cok, cerr, eok, eerr -> 
+            let r = parse.trampoline <| eok(stream.end, state, m) in
+                (r ? eok(stream.end, state, m) :
+                    parse.cons(p, atMost(max, p))(state, m, cok, cerr, eok, eerr)));
+        
 
 atLeast = joinP <<\ lang.times;
+
+betweenNonGreedy = joinP <<\ \min, max, p ->
+    parse.append(
+        lang.times(min, p),
+        atMost(max - min, p));
+
 
 /* Running
  ******************************************************************************/

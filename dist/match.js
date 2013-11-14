@@ -4,7 +4,7 @@
 */
 define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/stream", "nu/gen"], (function(require, exports, parse, lang, text, stream, gen) {
     "use strict";
-    var bof, eof, character, characteri, characterRange, characterRangei, anyCharacter, assert, assertNot, choice, choicea, sequence, times, between, atMost, atLeast, exec;
+    var bof, bol, eof, eol, character, characteri, characterRange, characterRangei, anyCharacter, assert, assertNot, wordBoundary, notWordBoundary, choice, choicea, sequence, times, between, betweenNonGreedy, atMost, atLeast, exec;
     var parse = parse,
         always = parse["always"],
         attempt = parse["attempt"],
@@ -42,6 +42,9 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     var join = foldl.bind(null, (function(x, y) {
         return (x + y);
     }), "");
+    var contains = (function(a, x) {
+        return (Array.prototype.indexOf.call(a, x) !== -1);
+    });
     var joinP = (function(p) {
         return bind(p, (function(f, g) {
             return (function(x) {
@@ -62,6 +65,12 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
                 return false;
         }
     });
+    var isWordChar = (function() {
+        {
+            var wordChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_";
+            return contains.bind(null, wordChars);
+        }
+    })();
     var fromCharCodeParser = (function(f, g) {
         return (function(x) {
             return f(g(x));
@@ -80,6 +89,9 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     var not = (function(m) {
         return either(next(attempt(m), fail()), always());
     });
+    var previous = parse.extract((function(x) {
+        return x.previous;
+    }));
     var State = (function(input, position, userState, previous) {
         parse.ParserState.call(this, input, position, userState);
         (this.previous = previous);
@@ -119,15 +131,25 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         return new(Data)(s.group, s.endIndex, x);
     }));
     (bof = bind(parse.getPosition, (function(pos) {
-        return ((pos === 0) ? always() : fail());
+        return ((pos.index === 0) ? always("") : fail());
     })));
-    (eof = parse.eof);
+    (bol = either(bof, bind(previous, (function(prev) {
+        return (isLineTerminator(prev) ? always("") : fail());
+    }))));
+    (eof = next(parse.eof, always("")));
+    (eol = either(eof, next(lookahead(token(isLineTerminator)), always(""))));
     (assert = lookahead);
     (assertNot = (function(f, g) {
         return (function(x) {
             return f(g(x));
         });
     })(assert, not));
+    (wordBoundary = bind(previous, (function(p) {
+        return assert(token((function(c) {
+            return ((isWordChar(c) && !isWordChar(p)) ? always() : fail());
+        })));
+    })));
+    (notWordBoundary = not(wordBoundary));
     (character = text.character);
     (characteri = (function(__a) {
         var c = __a[0];
@@ -177,13 +199,27 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         });
     })(joinP, lang.betweenTimes));
     (atMost = (function(max, p) {
-        return between(0, max, p);
+        return ((max === 0) ? always(stream.end) : (function(state, m, cok, cerr, eok, eerr) {
+            return (function() {
+                {
+                    var r = parse.trampoline(eok(stream.end, state, m));
+                    return (r ? eok(stream.end, state, m) : parse.cons(p, atMost(max, p))(state, m, cok, cerr, eok, eerr));
+                }
+            })();
+        }));
     }));
     (atLeast = (function(f, g) {
         return (function() {
             return f(g.apply(null, arguments));
         });
     })(joinP, lang.times));
+    (betweenNonGreedy = (function(f, g) {
+        return (function() {
+            return f(g.apply(null, arguments));
+        });
+    })(joinP, (function(min, max, p) {
+        return parse.append(lang.times(min, p), atMost((max - min), p));
+    })));
     (exec = (function(pattern, input) {
         return parse.parseState(pattern, new(State)(stream.from(input), parse.Position.initial, new(Data)(0, null, []), null), (function(x) {
             return [x];
@@ -192,7 +228,9 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         }));
     }));
     (exports.bof = bof);
+    (exports.bol = bol);
     (exports.eof = eof);
+    (exports.eol = eol);
     (exports.character = character);
     (exports.characteri = characteri);
     (exports.characterRange = characterRange);
@@ -200,11 +238,14 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     (exports.anyCharacter = anyCharacter);
     (exports.assert = assert);
     (exports.assertNot = assertNot);
+    (exports.wordBoundary = wordBoundary);
+    (exports.notWordBoundary = notWordBoundary);
     (exports.choice = choice);
     (exports.choicea = choicea);
     (exports.sequence = sequence);
     (exports.times = times);
     (exports.between = between);
+    (exports.betweenNonGreedy = betweenNonGreedy);
     (exports.atMost = atMost);
     (exports.atLeast = atLeast);
     (exports.exec = exec);

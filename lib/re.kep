@@ -81,6 +81,16 @@ var classChar = \c ->
                 match.characteri(x) :
                 match.character(x))));
 
+var matchBof = bind(getState, \s -> 
+    always(s & RE_M ?
+        match.bol :
+        match.bof));
+
+var matchEof = bind(getState, \s -> 
+    always(s & RE_M ?
+        match.eol :
+        match.eof));
+
 /* Escapes
  ******************************************************************************/
 var hexDigit = characters('0123456789abcdefABCDEF');
@@ -293,7 +303,7 @@ var quantifier = binds(
         optional(false, character('?'))),
     \[min, max], lazy ->
         always(lazy ?
-            (match.atLeast, min) :
+            (match.betweenNonGreedy, min, max) :
             (match.between, min, max)));
 
 /**
@@ -302,15 +312,19 @@ var quantifier = binds(
 var assertion = choice(
     next(
         character('^'),
-        always(match.eof)),
+        matchBof),
     
     next(
         character('$'),
-        always(match.bof)),
-        
-    attempt <| string('\\b'),
+        matchEof),
     
-    string('\\B'),
+    next(
+        string('\\b'),
+        always(match.wordBoundary)),
+    
+    next(
+        string('\\B'),
+        always(match.notWordBoundary)),
     
     between(character('('), character(')'),
         bind(
