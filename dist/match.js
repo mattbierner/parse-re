@@ -4,7 +4,7 @@
 */
 define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/stream", "nu/gen"], (function(require, exports, parse, lang, text, stream, gen) {
     "use strict";
-    var bof, bol, eof, eol, character, characteri, characterRange, characterRangei, anyCharacter, assert, assertNot, wordBoundary, notWordBoundary, choice, choicea, sequence, times, between, betweenNonGreedy, atMost, atLeast, exec;
+    var not, character, characteri, characterRange, characterRangei, anyCharacter, digit, notDigit, space, notSpace, word, notWord, assert, assertNot, wordBoundary, notWordBoundary, bof, bol, eof, eol, choice, choicea, sequence, times, between, betweenNonGreedy, atMost, atLeast, group, exec;
     var parse = parse,
         always = parse["always"],
         attempt = parse["attempt"],
@@ -13,12 +13,13 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         eager = parse["eager"],
         either = parse["either"],
         enumeration = parse["enumeration"],
+        getState = parse["getState"],
+        modifyState = parse["modifyState"],
         fail = parse["fail"],
         lookahead = parse["lookahead"],
         many = parse["many"],
         many1 = parse["many1"],
         next = parse["next"],
-        test = parse["test"],
         token = parse["token"],
         lang = lang,
         sepBy = lang["sepBy"],
@@ -42,6 +43,16 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     var join = foldl.bind(null, (function(x, y) {
         return (x + y);
     }), "");
+    var copy = (function(arr) {
+        var arr = arr,
+            length = arr["length"];
+        var out = [];
+        for (var i = 0;
+            (i < length);
+            (i = (i + 1)))(out[i] = arr[i]);
+
+        return out;
+    });
     var contains = (function(a, x) {
         return (Array.prototype.indexOf.call(a, x) !== -1);
     });
@@ -54,6 +65,9 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     });
     var toLowerCase = Function.prototype.call.bind(String.prototype.toLowerCase);
     var toUpperCase = Function.prototype.call.bind(String.prototype.toUpperCase);
+    var fromCharCode = (function(x) {
+        return String.fromCharCode(x);
+    });
     var isLineTerminator = (function(x) {
         switch (x) {
             case "\n":
@@ -79,16 +93,16 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         return (function(x) {
             return f(g(x));
         });
-    })(String.fromCharCode, (function(f, g) {
+    })(fromCharCode, (function(f, g) {
         return (function(x) {
             return f(g(x));
         });
     })((function(x) {
         return parseInt(x, 16);
     }), join)));
-    var not = (function(m) {
+    (not = (function(m) {
         return either(next(attempt(m), fail()), always());
-    });
+    }));
     var previous = parse.extract((function(x) {
         return x.previous;
     }));
@@ -130,20 +144,24 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     (Data.setCaptures = (function(s, x) {
         return new(Data)(s.group, s.endIndex, x);
     }));
+    var empty = always("");
     (assert = (function(p) {
-        return next(lookahead(p), always(""));
+        return next(lookahead(p), empty);
     }));
     (assertNot = (function(f, g) {
         return (function(x) {
             return f(g(x));
         });
     })(assert, not));
-    (bof = bind(parse.getPosition, (function(pos) {
-        return ((pos.index === 0) ? always("") : fail());
+    var test = (function(p, f) {
+        return bind(p, (function(x) {
+            return (f(x) ? empty : fail());
+        }));
+    });
+    (bof = test(parse.getPosition, (function(pos) {
+        return (pos.index === 0);
     })));
-    (bol = either(bof, bind(previous, (function(prev) {
-        return (isLineTerminator(prev) ? always("") : fail());
-    }))));
+    (bol = either(bof, test(previous, isLineTerminator)));
     (eof = assert(parse.eof));
     (eol = either(eof, assert(token(isLineTerminator))));
     (wordBoundary = either(eof, assert(bind(previous, (function(p) {
@@ -152,13 +170,37 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         }));
     })))));
     (notWordBoundary = not(wordBoundary));
+    (group = (function(p) {
+        return bind(getState, (function(s) {
+            return (function() {
+                {
+                    var i = s.captures.length;
+                    return next(modifyState((function(s) {
+                        var c = copy(s.captures);
+                        (c[i] = "");
+                        return Data.setCaptures(s, c);
+                    })), bind(p, (function(x) {
+                        return next(modifyState((function(s) {
+                            var c = copy(s.captures);
+                            (c[i] = x);
+                            if (i) debugger;
+
+                            ;
+                            console.log(i, c);
+                            return Data.setCaptures(s, c);
+                        })), always(x));
+                    })));
+                }
+            })();
+        }));
+    }));
     (character = text.character);
     (characteri = (function(__a) {
         var c = __a[0];
         return text.characters((toLowerCase(c) + toUpperCase(c)));
     }));
     (characterRange = (function(start, end) {
-        return text.characters(join(map.bind(null, String.fromCharCode)(gen.range(start.charCodeAt(0), (end.charCodeAt(0) + 1), 1))));
+        return text.characters(join(map.bind(null, fromCharCode)(gen.range(start.charCodeAt(0), (end.charCodeAt(0) + 1), 1))));
     }));
     (characterRangei = (function(__a, __a0) {
         var b = __a[0],
@@ -186,6 +228,12 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
             return f(g.apply(null, arguments));
         });
     })(parse.choicea, args));
+    (digit = characterRange("0", "9"));
+    (notDigit = not(digit));
+    (space = text.characters("\t\u000b\f  ﻿\n\r\u2028\u2029"));
+    (notSpace = not(space));
+    (word = text.characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"));
+    (notWord = not(word));
     (sequence = (function(f, g) {
         return (function(x) {
             return f(g(x));
@@ -223,25 +271,32 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         return parse.append(lang.times(min, p), atMost((max - min), p));
     })));
     (exec = (function(pattern, input) {
-        return parse.parseState(pattern, new(State)(stream.from(input), parse.Position.initial, new(Data)(0, null, []), null), (function(x) {
-            return [x];
+        return parse.parseState(pattern, new(State)(stream.from(input), parse.Position.initial, new(Data)(0, null, []), null), (function(x, s) {
+            return s.userState.captures;
         }), (function() {
             return null;
         }));
     }));
-    (exports.bof = bof);
-    (exports.bol = bol);
-    (exports.eof = eof);
-    (exports.eol = eol);
+    (exports.not = not);
     (exports.character = character);
     (exports.characteri = characteri);
     (exports.characterRange = characterRange);
     (exports.characterRangei = characterRangei);
     (exports.anyCharacter = anyCharacter);
+    (exports.digit = digit);
+    (exports.notDigit = notDigit);
+    (exports.space = space);
+    (exports.notSpace = notSpace);
+    (exports.word = word);
+    (exports.notWord = notWord);
     (exports.assert = assert);
     (exports.assertNot = assertNot);
     (exports.wordBoundary = wordBoundary);
     (exports.notWordBoundary = notWordBoundary);
+    (exports.bof = bof);
+    (exports.bol = bol);
+    (exports.eof = eof);
+    (exports.eol = eol);
     (exports.choice = choice);
     (exports.choicea = choicea);
     (exports.sequence = sequence);
@@ -250,5 +305,6 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     (exports.betweenNonGreedy = betweenNonGreedy);
     (exports.atMost = atMost);
     (exports.atLeast = atLeast);
+    (exports.group = group);
     (exports.exec = exec);
 }))

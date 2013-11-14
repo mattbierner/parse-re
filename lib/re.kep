@@ -107,7 +107,33 @@ var unicodeEscapeSequence = next(
 
 var decimalEscape = decimalIntegerLiteral;
 
-var characterClassEscape = characters('dDsSwW');
+/**
+ * 
+ */
+var characterClassEscape = choice(
+    next(
+        character('d'),
+        always(match.digit)),
+    
+    next(
+        character('D'),
+        always(match.notDigit)),
+    
+    next(
+        character('s'),
+        always(match.space)),
+    
+    next(
+        character('S'),
+        always(match.notSpace)),
+    
+    next(
+        character('d'),
+        always(match.word)),
+        
+    next(
+        character('D'),
+        always(match.notWord)));
 
 var identityEscape = parse.anyToken; //TODO
 
@@ -152,7 +178,7 @@ var classEscape = choice(
 
 
 
-/* Parsers
+/* Character Classes
  ******************************************************************************/
 var classAtomNoDash = choice(
     token((!) <\ (test, characters('\\-]'))),
@@ -160,7 +186,10 @@ var classAtomNoDash = choice(
         character('\\'),
         classEscape));
 
-var classAtom = choice(
+/**
+ * 
+ */
+var classAtom = either(
     character('-'),
     classAtomNoDash);
 
@@ -223,19 +252,26 @@ classRanges = optional(fail(), nonEmptyClassRanges);
  * 
  */
 var characterClass = between(character('['), character(']'),
-    choice(
-        bind(
-            next(character('^'), classRanges),
-            \range -> always(token((!) <\ (test, range)))),
-        bind(
-            classRanges,
-            \range -> always(token((test, range))))));
+    either(
+        next(
+            character('^'), 
+            bind(classRanges, \range ->
+                always(token((!) <\ (test, range))))),
+        classRanges));
 
+/* Atom
+ ******************************************************************************/
+/**
+ * 
+ */
 var atomEscape = choice(
-    decimalEscape,
-    characterEscape,
+    classChar(decimalEscape),
+    classChar(characterEscape),
     characterClassEscape);
 
+/**
+ * 
+ */
 var patternCharacter = token(\tok -> {
     switch (tok) {
         case '^':
@@ -270,16 +306,18 @@ var atom = choice(
     
     next(
         character('\\'),
-        classChar(atomEscape)),
+        atomEscape),
     
     characterClass,
     
     between(character('('), character(')'),
-        choice(
-            next(
-                parse.optional(null, string('?:')),
+        bind(
+            either(
+                next(
+                    parse.optional(null, string('?:')),
+                    disjunction),
                 disjunction),
-            disjunction)));
+            always <\ match.group)));
 
 /**
  * 
@@ -351,7 +389,7 @@ var assertion = choice(
  * 
  */
 var term = choice(
-    assertion,
+    attempt <| assertion,
     binds(
         enumeration(
             atom,
@@ -377,7 +415,9 @@ disjunction = bind(
 /**
  * 
  */
-pattern = disjunction;
+pattern = bind(
+    disjunction,
+    always <\ match.group);
 
 /* Evaluation
  ******************************************************************************/

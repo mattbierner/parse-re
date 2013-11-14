@@ -2,22 +2,34 @@
  * 
  */
 package (
-    bof,
-    bol,
-    eof,
-    eol,
-    
+    not,
+        
+// Characters
     character,
     characteri,
     characterRange,
     characterRangei,
     anyCharacter,
     
+// Character Classes
+    digit,
+    notDigit,
+    space,
+    notSpace,
+    word,
+    notWord,
+    
+// Assertions
     assert,
     assertNot,
     wordBoundary,
     notWordBoundary,
-    
+    bof,
+    bol,
+    eof,
+    eol,
+
+//
     choice,
     choicea,
     sequence,
@@ -27,6 +39,9 @@ package (
     betweenNonGreedy,
     atMost,
     atLeast,
+    
+// Group
+    group,
     
 // Running
     exec)
@@ -39,12 +54,13 @@ with
         eager,
         either,
         enumeration,
+        getState,
+        modifyState,
         fail,
         lookahead,
         many,
         many1,
         next,
-        test,
         token},
     import 'parse/lang' lang {sepBy, sepEndBy, then},
     import 'parse/text' text {characters, match, string},
@@ -56,12 +72,21 @@ var args = \args(...) -> args;
 
 var join = (foldl, (+), '');
 
+var copy = \arr{length} -> {
+    var out = [];
+    for (var i = 0; i < length; i = i + 1)
+        out[i] = arr[i];
+    return out;
+};
+
 var contains = \a, x -> Array.prototype.indexOf.call(a, x) !== -1;
 
 var joinP = \p -> bind(p, always <\ join);
 
 var toLowerCase =  Function.prototype.call.bind(String.prototype.toLowerCase);
 var toUpperCase =  Function.prototype.call.bind(String.prototype.toUpperCase);
+
+var fromCharCode = \x -> String.fromCharCode(x);
 
 var isLineTerminator = \x -> {
     switch (x) {
@@ -85,10 +110,10 @@ in
 var fromCharCodeParser =
     join
     \> \x -> parseInt(x, 16)
-    \> String.fromCharCode
+    \> fromCharCode
     \> always;
 
-var not = \m -> 
+not = \m -> 
     either(
         next(attempt <| m, fail()),
         always());
@@ -141,6 +166,10 @@ Data.setEndIndex = \s, x ->
 Data.setCaptures = \s, x ->
     new Data(s.group, s.endIndex, x);
 
+/* Base
+ ******************************************************************************/
+var empty = always('');
+
 /* Assertions
  ******************************************************************************/
 /**
@@ -149,27 +178,27 @@ Data.setCaptures = \s, x ->
 assert = \p ->
     next(
         lookahead <| p,
-        always(''));
+        empty);
 
 /**
  * Check the input does not match a parser without consuming any input.
  */
 assertNot = not \> assert;
 
+var test = \p, f ->
+    bind(p, \x -> f(x) ? empty : fail());
+
 /**
  * Match the beginning of a file. Does not consume any input.
  */
-bof = bind(
-    parse.getPosition,
-    \pos -> pos.index === 0 ? always('') : fail());
+bof = test(parse.getPosition, \pos -> pos.index === 0);
 
 /**
  * Match the beginning of a line. Does not consume any input.
  */
 bol = either(
     bof,
-    bind(previous, \prev ->
-        isLineTerminator(prev) ? always('') : fail()));
+    test(previous, isLineTerminator));
 
 /**
  * Match the end of a file. Does not consume any input.
@@ -196,6 +225,30 @@ wordBoundary = either(
  */
 notWordBoundary = not <| wordBoundary;
 
+/* Groups
+ ******************************************************************************/
+group = \p ->
+    bind(getState, \s ->
+        let i = s.captures.length in
+            next(
+                modifyState(\s -> {
+                    var c = copy(s.captures);
+                    c[i] = '';
+                    return Data.setCaptures(s, c);
+                }),
+                bind(p, \x -> 
+                    next(
+                        modifyState(\s -> {
+                            var c = copy(s.captures);
+                            c[i] = x;
+                            if (i)
+                                debugger;
+                            static console;
+                            console.log(i, c);
+                            return Data.setCaptures(s, c);
+                        }),
+                        always(x)))));
+
 /* Parsers
  ******************************************************************************/
 /**
@@ -214,7 +267,7 @@ characteri = \[c] ->
  */
 characterRange = \start, end ->
     (gen.range(start.charCodeAt(0), end.charCodeAt(0) + 1, 1)
-        |> (map, String.fromCharCode)
+        |> (map, fromCharCode)
         |> join
         |> text.characters);
 
@@ -243,8 +296,21 @@ choice = (map, attempt)
 /**
  * 
  */
-choicea = args
-    \>> parse.choicea;
+choicea = args \>> parse.choicea;
+
+/* Character Classes
+ ******************************************************************************/
+digit = characterRange('0', '9');
+
+notDigit = not <| digit;
+
+space = text.characters("\u0009\u000b\u000c\u0020\u00a0\ufeff\u000a\u000d\u2028\u2029");
+
+notSpace = not <| space;
+
+word = text.characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_");
+
+notWord = not <| word;
 
 /* Quantifiers
  ******************************************************************************/
@@ -263,7 +329,6 @@ atMost = \max, p ->
             let r = parse.trampoline <| eok(stream.end, state, m) in
                 (r ? eok(stream.end, state, m) :
                     parse.cons(p, atMost(max, p))(state, m, cok, cerr, eok, eerr)));
-        
 
 atLeast = joinP <<\ lang.times;
 
@@ -279,7 +344,7 @@ exec = \pattern, input ->
     parse.parseState(
         pattern,
         new State(stream.from(input), parse.Position.initial, new Data(0, null, []), null),
-        \x -> [x],
+        \x, s -> s.userState.captures,
         \ -> null);
 
 

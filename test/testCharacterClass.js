@@ -118,6 +118,10 @@ function(re,
                     null);
                 
                 assert.deepEqual(
+                    match.exec(p, 'e'),
+                    null);
+                
+                assert.deepEqual(
                     match.exec(p, 'A'),
                     null);
             }],

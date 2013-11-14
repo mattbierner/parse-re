@@ -105,7 +105,7 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     var hexEscapeSequence = next(character("x"), bind(times(2, hexDigit), fromCharCodeParser));
     var unicodeEscapeSequence = next(character("u"), bind(times(4, hexDigit), fromCharCodeParser));
     var decimalEscape = decimalIntegerLiteral;
-    var characterClassEscape = characters("dDsSwW");
+    var characterClassEscape = choice(next(character("d"), always(match.digit)), next(character("D"), always(match.notDigit)), next(character("s"), always(match.space)), next(character("S"), always(match.notSpace)), next(character("d"), always(match.word)), next(character("D"), always(match.notWord)));
     var identityEscape = parse.anyToken;
     var controlLetter = bind(characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), (function(x) {
         return (function() {
@@ -133,7 +133,7 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     })((function(x) {
         return !x;
     }), test.bind(null, characters("\\-]")))), next(character("\\"), classEscape));
-    var classAtom = choice(character("-"), classAtomNoDash);
+    var classAtom = either(character("-"), classAtomNoDash);
     var nonEmptyClassRangesNoDash = rec((function(nonEmptyClassRangesNoDash) {
         return (function() {
             {
@@ -173,7 +173,7 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         }
     })();
     (classRanges = optional(fail(), nonEmptyClassRanges));
-    var characterClass = between(character("["), character("]"), choice(bind(next(character("^"), classRanges), (function(range) {
+    var characterClass = between(character("["), character("]"), either(next(character("^"), bind(classRanges, (function(range) {
         return always(token((function(f, g) {
             return (function(x) {
                 return f(g(x));
@@ -181,10 +181,8 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         })((function(x) {
             return !x;
         }), test.bind(null, range))));
-    })), bind(classRanges, (function(range) {
-        return always(token(test.bind(null, range)));
-    }))));
-    var atomEscape = choice(decimalEscape, characterEscape, characterClassEscape);
+    }))), classRanges));
+    var atomEscape = choice(classChar(decimalEscape), classChar(characterEscape), characterClassEscape);
     var patternCharacter = token((function(tok) {
         switch (tok) {
             case "^":
@@ -206,7 +204,11 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
                 return true;
         }
     }));
-    var atom = choice(classChar(patternCharacter), next(character("."), always(match.anyCharacter)), next(character("\\"), classChar(atomEscape)), characterClass, between(character("("), character(")"), choice(next(parse.optional(null, string("?:")), disjunction), disjunction)));
+    var atom = choice(classChar(patternCharacter), next(character("."), always(match.anyCharacter)), next(character("\\"), atomEscape), characterClass, between(character("("), character(")"), bind(either(next(parse.optional(null, string("?:")), disjunction), disjunction), (function(f, g) {
+        return (function(x) {
+            return f(g(x));
+        });
+    })(always, match.group))));
     var quantifierPrefix = choice(next(character("*"), always([0, Infinity])), next(character("+"), always([1, Infinity])), next(character("?"), always([0, 1])), between(character("{"), character("}"), binds(enumeration(decimalDigits, optional(null, character(",")), optional(Infinity, decimalDigits)), (function(lower, hasUpper, upper) {
         return always((hasUpper ? [lower, upper] : [lower, lower]));
     }))));
@@ -222,7 +224,7 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
             });
         })(always, x));
     }))));
-    var term = choice(assertion, binds(enumeration(atom, optional(identity, quantifier)), (function(atom, quantifier) {
+    var term = choice(attempt(assertion), binds(enumeration(atom, optional(identity, quantifier)), (function(atom, quantifier) {
         return always(quantifier(atom));
     })));
     var alternative = bind(many(term), (function(f, g) {
@@ -235,7 +237,11 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
             return f(g(x));
         });
     })(always, match.choice)));
-    (pattern = disjunction);
+    (pattern = bind(disjunction, (function(f, g) {
+        return (function(x) {
+            return f(g(x));
+        });
+    })(always, match.group)));
     (RE_NONE = 0);
     (RE_I = (1 << 0));
     (RE_G = (1 << 1));
