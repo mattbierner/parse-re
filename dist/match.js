@@ -4,7 +4,7 @@
 */
 define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/stream", "nu/gen"], (function(require, exports, parse, lang, text, stream, gen) {
     "use strict";
-    var not, character, characteri, characterRange, characterRangei, anyCharacter, digit, notDigit, space, notSpace, word, notWord, assert, assertNot, wordBoundary, notWordBoundary, bof, bol, eof, eol, choice, choicea, sequence, times, between, betweenNonGreedy, atMost, atLeast, group, exec;
+    var not, character, characteri, characterRange, characterRangei, anyCharacter, digit, notDigit, space, notSpace, word, notWord, assert, assertNot, wordBoundary, notWordBoundary, bof, bol, eof, eol, choice, choicea, sequence, times, between, betweenNonGreedy, atMost, atLeast, group, backReference, exec;
     var parse = parse,
         always = parse["always"],
         attempt = parse["attempt"],
@@ -130,19 +130,20 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     (State.prototype.setUserState = (function(userState) {
         return new(State)(this.input, this.position, userState, this.previous);
     }));
-    var Data = (function(group, endIndex, captures) {
+    var Data = (function(group, groups, endIndex, captures) {
         (this.group = group);
+        (this.groups = groups);
         (this.endIndex = endIndex);
         (this.captures = captures);
     });
     (Data.setGroup = (function(s, x) {
-        return new(Data)(x, s.endIndex, s.captures);
+        return new(Data)(x, s.groups, s.endIndex, s.captures);
     }));
     (Data.setEndIndex = (function(s, x) {
-        return new(Data)(s.group, x, s.captures);
+        return new(Data)(s.group, s.groups, x, s.captures);
     }));
     (Data.setCaptures = (function(s, x) {
-        return new(Data)(s.group, s.endIndex, x);
+        return new(Data)(s.group, s.groups, s.endIndex, x);
     }));
     var empty = always("");
     (assert = (function(p) {
@@ -170,26 +171,35 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         }));
     })))));
     (notWordBoundary = not(wordBoundary));
-    (group = (function(p) {
+    (group = (function(p, i) {
+        return bind(getState, (function(s) {
+            var captures = s.captures;
+            if ((i < captures.length)) return always("");
+
+            return next(modifyState((function(s) {
+                var c = copy(s.captures);
+                (c[i] = "");
+                return Data.setCaptures(s, c);
+            })), bind(p, (function(x) {
+                return next(modifyState((function(s) {
+                    var c = copy(s.captures);
+                    (c[i] = x);
+                    return Data.setCaptures(s, c);
+                })), always(x));
+            })));
+        }));
+    }));
+    (backReference = (function(i) {
         return bind(getState, (function(s) {
             return (function() {
                 {
-                    var i = s.captures.length;
-                    return next(modifyState((function(s) {
-                        var c = copy(s.captures);
-                        (c[i] = "");
-                        return Data.setCaptures(s, c);
-                    })), bind(p, (function(x) {
-                        return next(modifyState((function(s) {
-                            var c = copy(s.captures);
-                            (c[i] = x);
-                            if (i) debugger;
-
-                            ;
-                            console.log(i, c);
-                            return Data.setCaptures(s, c);
-                        })), always(x));
-                    })));
+                    var captures = s.captures;
+                    return ((i < captures.length) ? text.string(captures[i]) : (function() {
+                        {
+                            var groups = s.groups;
+                            return ((i < groups.length) ? groups[i] : fail());
+                        }
+                    })());
                 }
             })();
         }));
@@ -271,7 +281,7 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         return parse.append(lang.times(min, p), atMost((max - min), p));
     })));
     (exec = (function(pattern, input) {
-        return parse.parseState(pattern, new(State)(stream.from(input), parse.Position.initial, new(Data)(0, null, []), null), (function(x, s) {
+        return parse.parseState(pattern.pattern, new(State)(stream.from(input), parse.Position.initial, new(Data)(0, pattern.groups, null, []), null), (function(x, s) {
             return s.userState.captures;
         }), (function() {
             return null;
@@ -306,5 +316,6 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     (exports.atMost = atMost);
     (exports.atLeast = atLeast);
     (exports.group = group);
+    (exports.backReference = backReference);
     (exports.exec = exec);
 }))

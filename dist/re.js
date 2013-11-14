@@ -74,6 +74,36 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         var args = arguments;
         return classRanges.apply(null, args);
     });
+    var copy = (function(arr) {
+        var arr = arr,
+            length = arr["length"];
+        var out = [];
+        for (var i = 0;
+            (i < length);
+            (i = (i + 1)))(out[i] = arr[i]);
+
+        return out;
+    });
+    var addGroup = (function(a, g) {
+        var c = copy(a);
+        c.push(g);
+        return c;
+    });
+    var setGroup = (function(a, i, g) {
+        var c = copy(a);
+        (c[i] = g);
+        return c;
+    });
+    var Data = (function(flags, groups) {
+        (this.flags = flags);
+        (this.groups = groups);
+    });
+    (Data.addGroup = (function(s, g) {
+        return new(Data)(s.flags, addGroup(s.groups, g));
+    }));
+    (Data.setGroup = (function(s, i, g) {
+        return new(Data)(s.flags, setGroup(s.groups, i, g));
+    }));
     var decimalDigit = characters("0123456789");
     var decimalDigits = bind(many1(decimalDigit), (function(x) {
         return always(parseInt(join(x)));
@@ -91,16 +121,37 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     var classChar = (function(c) {
         return bind(c, (function(x) {
             return bind(getState, (function(s) {
-                return always(((s & RE_I) ? match.characteri(x) : match.character(x)));
+                return always(((s.flags & RE_I) ? match.characteri(x) : match.character(x)));
             }));
         }));
     });
     var matchBof = bind(getState, (function(s) {
-        return always(((s & RE_M) ? match.bol : match.bof));
+        return always(((s.flags & RE_M) ? match.bol : match.bof));
     }));
     var matchEof = bind(getState, (function(s) {
-        return always(((s & RE_M) ? match.eol : match.eof));
+        return always(((s.flags & RE_M) ? match.eol : match.eof));
     }));
+    var group = (function(p) {
+        return bind(parse.getState, (function(s) {
+            return (function() {
+                {
+                    var i = s.groups.length;
+                    return next(parse.modifyState((function(s) {
+                        return Data.addGroup(s, null);
+                    })), bind(p, (function(p) {
+                        return (function() {
+                            {
+                                var impl = match.group(p, i);
+                                return parse.next(parse.modifyState((function(s) {
+                                    return Data.setGroup(s, i, impl);
+                                })), always(impl));
+                            }
+                        })();
+                    })));
+                }
+            })();
+        }));
+    });
     var hexDigit = characters("0123456789abcdefABCDEF");
     var hexEscapeSequence = next(character("x"), bind(times(2, hexDigit), fromCharCodeParser));
     var unicodeEscapeSequence = next(character("u"), bind(times(4, hexDigit), fromCharCodeParser));
@@ -182,7 +233,11 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
             return !x;
         }), test.bind(null, range))));
     }))), classRanges));
-    var atomEscape = choice(classChar(decimalEscape), classChar(characterEscape), characterClassEscape);
+    var atomEscape = choice(bind(decimalEscape, (function(f, g) {
+        return (function(x) {
+            return f(g(x));
+        });
+    })(always, match.backReference)), classChar(characterEscape), characterClassEscape);
     var patternCharacter = token((function(tok) {
         switch (tok) {
             case "^":
@@ -204,11 +259,7 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
                 return true;
         }
     }));
-    var atom = choice(classChar(patternCharacter), next(character("."), always(match.anyCharacter)), next(character("\\"), atomEscape), characterClass, between(character("("), character(")"), bind(either(next(parse.optional(null, string("?:")), disjunction), disjunction), (function(f, g) {
-        return (function(x) {
-            return f(g(x));
-        });
-    })(always, match.group))));
+    var atom = choice(classChar(patternCharacter), next(character("."), always(match.anyCharacter)), next(character("\\"), atomEscape), characterClass, between(character("("), character(")"), either(next(string("?:"), disjunction), group(disjunction))));
     var quantifierPrefix = choice(next(character("*"), always([0, Infinity])), next(character("+"), always([1, Infinity])), next(character("?"), always([0, 1])), between(character("{"), character("}"), binds(enumeration(decimalDigits, optional(null, character(",")), optional(Infinity, decimalDigits)), (function(lower, hasUpper, upper) {
         return always((hasUpper ? [lower, upper] : [lower, lower]));
     }))));
@@ -237,17 +288,20 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
             return f(g(x));
         });
     })(always, match.choice)));
-    (pattern = bind(disjunction, (function(f, g) {
-        return (function(x) {
-            return f(g(x));
-        });
-    })(always, match.group)));
+    (pattern = group(disjunction));
     (RE_NONE = 0);
     (RE_I = (1 << 0));
     (RE_G = (1 << 1));
     (RE_M = (1 << 2));
     (evaluate = (function(input, flags) {
-        return parse.run(pattern, input, (flags || RE_NONE));
+        return parse.parse(pattern, input, new(Data)((flags || RE_NONE), []), (function(x, s) {
+            return ({
+                "pattern": x,
+                "groups": s.userState.groups
+            });
+        }), (function(x) {
+            throw x;
+        }));
     }));
     (exports.pattern = pattern);
     (exports.RE_NONE = RE_NONE);

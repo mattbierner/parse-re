@@ -42,6 +42,7 @@ package (
     
 // Group
     group,
+    backReference,
     
 // Running
     exec)
@@ -151,20 +152,22 @@ State.prototype.setUserState = \userState ->
 
 /* Data
  ******************************************************************************/
-var Data = function(group, endIndex, captures) {
+var Data = function(group, groups, endIndex, captures) {
     this.group = group;
+    this.groups = groups;
     this.endIndex = endIndex;
     this.captures = captures;
 };
 
+
 Data.setGroup = \s, x ->
-    new Data(x, s.endIndex, s.captures);
+    new Data(x, s.groups, s.endIndex, s.captures);
 
 Data.setEndIndex = \s, x ->
-    new Data(s.group, x, s.captures);
+    new Data(s.group, s.groups, x, s.captures);
 
 Data.setCaptures = \s, x ->
-    new Data(s.group, s.endIndex, x);
+    new Data(s.group, s.groups, s.endIndex, x);
 
 /* Base
  ******************************************************************************/
@@ -227,28 +230,39 @@ notWordBoundary = not <| wordBoundary;
 
 /* Groups
  ******************************************************************************/
-group = \p ->
-    bind(getState, \s ->
-        let i = s.captures.length in
-            next(
-                modifyState(\s -> {
-                    var c = copy(s.captures);
-                    c[i] = '';
-                    return Data.setCaptures(s, c);
-                }),
-                bind(p, \x -> 
-                    next(
-                        modifyState(\s -> {
-                            var c = copy(s.captures);
-                            c[i] = x;
-                            if (i)
-                                debugger;
-                            static console;
-                            console.log(i, c);
-                            return Data.setCaptures(s, c);
-                        }),
-                        always(x)))));
 
+group = \p, i ->
+    bind(getState, \s -> {
+        var captures = s.captures;
+        if (i < captures.length)
+            return always('');
+        
+        return next(
+            modifyState(\s -> {
+                var c = copy(s.captures);
+                c[i] = '';
+                return Data.setCaptures(s, c);
+            }),
+            bind(p, \x -> 
+                next(
+                    modifyState(\s -> {
+                        var c = copy(s.captures);
+                        c[i] = x;
+                        return Data.setCaptures(s, c);
+                    }),
+                    always(x))));
+    });
+    
+backReference = \i ->
+      bind(getState, \s ->
+         let captures = s.captures in
+             (i < captures.length ?
+                 text.string(captures[i]) :
+                 let groups = s.groups in
+                     (i < groups.length ?
+                         groups[i] :
+                         fail())));
+         
 /* Parsers
  ******************************************************************************/
 /**
@@ -342,8 +356,8 @@ betweenNonGreedy = joinP <<\ \min, max, p ->
  ******************************************************************************/
 exec = \pattern, input ->
     parse.parseState(
-        pattern,
-        new State(stream.from(input), parse.Position.initial, new Data(0, null, []), null),
+        pattern.pattern,
+        new State(stream.from(input), parse.Position.initial, new Data(0, pattern.groups, null, []), null),
         \x, s -> s.userState.captures,
         \ -> null);
 

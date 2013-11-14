@@ -57,6 +57,43 @@ var disjunction = \args(...) -> disjunction.apply(null, args);
 
 var classRanges = \args(...) -> classRanges.apply(null, args);
 
+/* Data
+ ******************************************************************************/
+var copy = \arr{length} -> {
+    var out = [];
+    for (var i = 0; i < length; i = i + 1)
+        out[i] = arr[i];
+    return out;
+};
+
+var addGroup = \a, g -> {
+    var c = copy(a);
+    c.push(g);
+    return c;
+};
+
+var setGroup = \a, i, g -> {
+    var c = copy(a);
+    c[i] = g;
+    return c;
+};
+
+
+var Data = function(flags, groups) {
+    this.flags = flags;
+    this.groups = groups;
+};
+
+Data.addGroup = \s, g ->
+    new Data(
+        s.flags,
+        addGroup(s.groups, g));
+    
+Data.setGroup = \s, i, g ->
+    new Data(
+        s.flags,
+        setGroup(s.groups, i, g));
+
 /* Escapes
  ******************************************************************************/
 var decimalDigit = characters('0123456789');
@@ -77,19 +114,30 @@ var reChar = always <\ character;
 var classChar = \c ->
     bind(c, \x ->
         bind(getState, \s -> 
-            always(s & RE_I ?
+            always(s.flags & RE_I ?
                 match.characteri(x) :
                 match.character(x))));
 
 var matchBof = bind(getState, \s -> 
-    always(s & RE_M ?
+    always(s.flags & RE_M ?
         match.bol :
         match.bof));
 
 var matchEof = bind(getState, \s -> 
-    always(s & RE_M ?
+    always(s.flags & RE_M ?
         match.eol :
         match.eof));
+
+var group = \p ->
+    bind(parse.getState, \s ->
+        let i = s.groups.length in
+            next(
+                parse.modifyState(\s -> Data.addGroup(s, null)),
+                bind(p, \p ->
+                    let impl = match.group(p, i) in
+                        parse.next(
+                            parse.modifyState(\s -> Data.setGroup(s, i, impl)),
+                            always(impl)))));
 
 /* Escapes
  ******************************************************************************/
@@ -265,7 +313,10 @@ var characterClass = between(character('['), character(']'),
  * 
  */
 var atomEscape = choice(
-    classChar(decimalEscape),
+    bind(
+        decimalEscape,
+        always <\ match.backReference),
+        
     classChar(characterEscape),
     characterClassEscape);
 
@@ -311,13 +362,11 @@ var atom = choice(
     characterClass,
     
     between(character('('), character(')'),
-        bind(
-            either(
-                next(
-                    parse.optional(null, string('?:')),
-                    disjunction),
+        either(
+            next(
+                string('?:'),
                 disjunction),
-            always <\ match.group)));
+            group(disjunction))));
 
 /**
  * 
@@ -415,9 +464,7 @@ disjunction = bind(
 /**
  * 
  */
-pattern = bind(
-    disjunction,
-    always <\ match.group);
+pattern = group(disjunction);
 
 /* Evaluation
  ******************************************************************************/
@@ -427,9 +474,11 @@ RE_G = 1 << 1;
 RE_M = 1 << 2;
 
 evaluate = \input, flags ->
-    parse.run(
+    parse.parse(
         pattern,
         input,
-        (flags || RE_NONE));
+        new Data((flags || RE_NONE), []),
+        \x, s -> ({'pattern': x, 'groups': s.userState.groups}),
+        \x -> { throw x; });
 
 }
