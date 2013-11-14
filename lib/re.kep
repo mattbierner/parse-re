@@ -62,7 +62,7 @@ var classRanges = \args(...) -> classRanges.apply(null, args);
 var decimalDigit = characters('0123456789');
 
 var decimalDigits = bind(
-    many1(decimalDigits),
+    many1(decimalDigit),
     \x -> (x
         |> join
         |> parseInt
@@ -258,13 +258,22 @@ var patternCharacter = token(\tok -> {
     }
 });
 
+/**
+ * 
+ */
 var atom = choice(
     classChar(patternCharacter),
-    next(character('.'), always(match.anyCharacter)),
-    bind(
-        next(character('\\'), atomEscape),
-        \x -> always(match.character(x))),
+    
+    next(
+        character('.'),
+        always(match.anyCharacter)),
+    
+    next(
+        character('\\'),
+        classChar(atomEscape)),
+    
     characterClass,
+    
     between(character('('), character(')'),
         choice(
             next(
@@ -278,21 +287,26 @@ var atom = choice(
 var quantifierPrefix = choice(
     next(
         character('*'),
-        always([0, Infinity, true])),
+        always([0, Infinity])),
+    
     next(
         character('+'),
-        always([1, Infinity, true])),
+        always([1, Infinity])),
+    
     next(
         character('?'),
-        always([0, 1, true])),
+        always([0, 1])),
+    
     between(character('{'), character('}'),
         binds(
             enumeration(
-                next(
-                    decimalDigits,
-                    optional(null, character(','))),
+                decimalDigits,
+                optional(null, character(',')),
                 optional(Infinity, decimalDigits)),
-            \lower, upper -> always([lower, upper, true]))));
+            \lower, hasUpper, upper ->
+                always(hasUpper ?
+                    [lower, upper] :
+                    [lower, lower]))));
 
 /**
  * 
@@ -329,8 +343,8 @@ var assertion = choice(
     between(character('('), character(')'),
         bind(
             either(
-                next(attempt <| string('?='), always(match.assert)),
-                next(attempt <| string('?!'), always(match.assertNot))),
+                next(string('?='), always(match.assert)),
+                next(string('?!'), always(match.assertNot))),
             \x -> bind(disjunction, always <\ x))));
 
 /**

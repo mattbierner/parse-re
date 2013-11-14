@@ -130,25 +130,27 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     (Data.setCaptures = (function(s, x) {
         return new(Data)(s.group, s.endIndex, x);
     }));
+    (assert = (function(p) {
+        return next(lookahead(p), always(""));
+    }));
+    (assertNot = (function(f, g) {
+        return (function(x) {
+            return f(g(x));
+        });
+    })(assert, not));
     (bof = bind(parse.getPosition, (function(pos) {
         return ((pos.index === 0) ? always("") : fail());
     })));
     (bol = either(bof, bind(previous, (function(prev) {
         return (isLineTerminator(prev) ? always("") : fail());
     }))));
-    (eof = next(parse.eof, always("")));
-    (eol = either(eof, next(lookahead(token(isLineTerminator)), always(""))));
-    (assert = lookahead);
-    (assertNot = (function(f, g) {
-        return (function(x) {
-            return f(g(x));
-        });
-    })(assert, not));
-    (wordBoundary = bind(previous, (function(p) {
-        return assert(token((function(c) {
-            return ((isWordChar(c) && !isWordChar(p)) ? always() : fail());
-        })));
-    })));
+    (eof = assert(parse.eof));
+    (eol = either(eof, assert(token(isLineTerminator))));
+    (wordBoundary = either(eof, assert(bind(previous, (function(p) {
+        return token((function(c) {
+            return (isWordChar(c) && !isWordChar(p));
+        }));
+    })))));
     (notWordBoundary = not(wordBoundary));
     (character = text.character);
     (characteri = (function(__a) {

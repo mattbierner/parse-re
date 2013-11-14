@@ -25,8 +25,12 @@
             ['testAtom',
             'testCharacterClass',
             'testQuantifier',
+            'testDisjunction',
             'testEof',
-            'testBof'],
+            'testBof',
+            'testAssert',
+            'testAssertNot',
+            'testWordBoundary'],
             function() {
                 Array.prototype.forEach.call(arguments, function(m){
                     m.module && module(m.module);

@@ -75,7 +75,7 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         return classRanges.apply(null, args);
     });
     var decimalDigit = characters("0123456789");
-    var decimalDigits = bind(many1(decimalDigits), (function(x) {
+    var decimalDigits = bind(many1(decimalDigit), (function(x) {
         return always(parseInt(join(x)));
     }));
     var decimalIntegerLiteral = bind(decimalDigits, (function(f, g) {
@@ -206,18 +206,16 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
                 return true;
         }
     }));
-    var atom = choice(classChar(patternCharacter), next(character("."), always(match.anyCharacter)), bind(next(character("\\"), atomEscape), (function(x) {
-        return always(match.character(x));
-    })), characterClass, between(character("("), character(")"), choice(next(parse.optional(null, string("?:")), disjunction), disjunction)));
-    var quantifierPrefix = choice(next(character("*"), always([0, Infinity, true])), next(character("+"), always([1, Infinity, true])), next(character("?"), always([0, 1, true])), between(character("{"), character("}"), binds(enumeration(next(decimalDigits, optional(null, character(","))), optional(Infinity, decimalDigits)), (function(lower, upper) {
-        return always([lower, upper, true]);
+    var atom = choice(classChar(patternCharacter), next(character("."), always(match.anyCharacter)), next(character("\\"), classChar(atomEscape)), characterClass, between(character("("), character(")"), choice(next(parse.optional(null, string("?:")), disjunction), disjunction)));
+    var quantifierPrefix = choice(next(character("*"), always([0, Infinity])), next(character("+"), always([1, Infinity])), next(character("?"), always([0, 1])), between(character("{"), character("}"), binds(enumeration(decimalDigits, optional(null, character(",")), optional(Infinity, decimalDigits)), (function(lower, hasUpper, upper) {
+        return always((hasUpper ? [lower, upper] : [lower, lower]));
     }))));
     var quantifier = binds(enumeration(quantifierPrefix, optional(false, character("?"))), (function(__a, lazy) {
         var min = __a[0],
             max = __a[1];
         return always((lazy ? match.betweenNonGreedy.bind(null, min, max) : match.between.bind(null, min, max)));
     }));
-    var assertion = choice(next(character("^"), matchBof), next(character("$"), matchEof), next(string("\\b"), always(match.wordBoundary)), next(string("\\B"), always(match.notWordBoundary)), between(character("("), character(")"), bind(either(next(attempt(string("?=")), always(match.assert)), next(attempt(string("?!")), always(match.assertNot))), (function(x) {
+    var assertion = choice(next(character("^"), matchBof), next(character("$"), matchEof), next(string("\\b"), always(match.wordBoundary)), next(string("\\B"), always(match.notWordBoundary)), between(character("("), character(")"), bind(either(next(string("?="), always(match.assert)), next(string("?!"), always(match.assertNot))), (function(x) {
         return bind(disjunction, (function(f, g) {
             return (function(x) {
                 return f(g(x));

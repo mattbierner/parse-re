@@ -144,50 +144,56 @@ Data.setCaptures = \s, x ->
 /* Assertions
  ******************************************************************************/
 /**
- * 
+ * Check the input matches a parser without consuming any input.
+ */
+assert = \p ->
+    next(
+        lookahead <| p,
+        always(''));
+
+/**
+ * Check the input does not match a parser without consuming any input.
+ */
+assertNot = not \> assert;
+
+/**
+ * Match the beginning of a file. Does not consume any input.
  */
 bof = bind(
     parse.getPosition,
     \pos -> pos.index === 0 ? always('') : fail());
 
+/**
+ * Match the beginning of a line. Does not consume any input.
+ */
 bol = either(
     bof,
     bind(previous, \prev ->
         isLineTerminator(prev) ? always('') : fail()));
 
 /**
- * 
+ * Match the end of a file. Does not consume any input.
  */
-eof = next(
-    parse.eof,
-    always(''));
+eof = assert <| parse.eof;
 
+/**
+ * Match the end of a line. Does not consume any input.
+ */
 eol = either(
     eof,
-    next(
-        lookahead <| token(isLineTerminator),
-        always('')));
-
+    assert <| token(isLineTerminator));
 
 /**
- * Check the input matches a parser without consuming any input.
+ * Match a word boundary. Does not consume any input.
  */
-assert = lookahead;
+wordBoundary = either(
+    eof,
+    assert <| bind(previous, \p ->
+        token(\c -> isWordChar(c) && !isWordChar(p))));
 
 /**
- * Check the input does not match a parser without consuming any input.
+ * Does not match a word boundary. Does not consume any input.
  */
-assertNot = assert <\ not;
-
-/**
- * 
- */
-wordBoundary = bind(previous, \p ->
-    assert(token(\c ->
-        isWordChar(c) && !isWordChar(p) ?
-            always():
-            fail())));
-
 notWordBoundary = not <| wordBoundary;
 
 /* Parsers
