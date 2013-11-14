@@ -4,12 +4,13 @@
 */
 define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/stream", "nu/gen"], (function(require, exports, parse, lang, text, stream, gen) {
     "use strict";
-    var bof, eof, character, characterRange, anyCharacter, assert, assertNot, choice, choicea, sequence, times, between, atMost, atLeast, exec;
+    var bof, eof, character, characteri, characterRange, characterRangei, anyCharacter, assert, assertNot, choice, choicea, sequence, times, between, atMost, atLeast, exec;
     var parse = parse,
         always = parse["always"],
         attempt = parse["attempt"],
         bind = parse["bind"],
         binds = parse["binds"],
+        eager = parse["eager"],
         either = parse["either"],
         enumeration = parse["enumeration"],
         fail = parse["fail"],
@@ -39,6 +40,26 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     var join = foldl.bind(null, (function(x, y) {
         return (x + y);
     }), "");
+    var joinP = (function(p) {
+        return bind(p, (function(f, g) {
+            return (function(x) {
+                return f(g(x));
+            });
+        })(always, join));
+    });
+    var toLowerCase = Function.prototype.call.bind(String.prototype.toLowerCase);
+    var toUpperCase = Function.prototype.call.bind(String.prototype.toUpperCase);
+    var isLineTerminator = (function(x) {
+        switch (x) {
+            case "\n":
+            case "\r":
+            case "\u2028":
+            case "\u2029":
+                return true;
+            default:
+                return false;
+        }
+    });
     var fromCharCodeParser = (function(f, g) {
         return (function(x) {
             return f(g(x));
@@ -82,12 +103,25 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         });
     })(assert, not));
     (character = text.character);
-    (characterRange = (function(start, end) {
-        return text.characters(foldl.bind(null, (function(x, y) {
-            return (x + y);
-        }), "")(map.bind(null, String.fromCharCode)(gen.range(start.charCodeAt(0), (end.charCodeAt(0) + 1), 1))));
+    (characteri = (function(__a) {
+        var c = __a[0];
+        return text.characters((toLowerCase(c) + toUpperCase(c)));
     }));
-    (anyCharacter = text.anyCharacter);
+    (characterRange = (function(start, end) {
+        return text.characters(join(map.bind(null, String.fromCharCode)(gen.range(start.charCodeAt(0), (end.charCodeAt(0) + 1), 1))));
+    }));
+    (characterRangei = (function(__a, __a0) {
+        var b = __a[0],
+            c = __a0[0];
+        return either(characterRange(toLowerCase(b), toLowerCase(c)), characterRange(toUpperCase(b), toUpperCase(c)));
+    }));
+    (anyCharacter = token((function(f, g) {
+        return (function(x) {
+            return f(g(x));
+        });
+    })((function(x) {
+        return !x;
+    }), isLineTerminator)));
     (choice = (function(f, g) {
         return (function(x) {
             return f(g(x));
@@ -106,22 +140,27 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         return (function(x) {
             return f(g(x));
         });
-    })(parse.eager, (function(f, g) {
+    })(joinP, (function(f, g) {
         return (function(x) {
             return f(g(x));
         });
     })(parse.enumerationa, toArray)));
-    (times = lang.times);
-    (between = lang.betweenTimes);
+    (between = (function(f, g) {
+        return (function() {
+            return f(g.apply(null, arguments));
+        });
+    })(joinP, lang.betweenTimes));
     (atMost = (function(max, p) {
         return between(0, max, p);
     }));
-    (atLeast = (function(min, p) {
-        return between(min, Infinity, p);
-    }));
+    (atLeast = (function(f, g) {
+        return (function() {
+            return f(g.apply(null, arguments));
+        });
+    })(joinP, lang.times));
     (exec = (function(pattern, input) {
         return parse.parse(pattern, input, new(State)(0, null, []), (function(x) {
-            return x;
+            return [x];
         }), (function() {
             return null;
         }));
@@ -129,7 +168,9 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     (exports.bof = bof);
     (exports.eof = eof);
     (exports.character = character);
+    (exports.characteri = characteri);
     (exports.characterRange = characterRange);
+    (exports.characterRangei = characterRangei);
     (exports.anyCharacter = anyCharacter);
     (exports.assert = assert);
     (exports.assertNot = assertNot);

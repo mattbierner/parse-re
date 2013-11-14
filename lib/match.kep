@@ -4,8 +4,11 @@
 package (
     bof,
     eof,
+    
     character,
+    characteri,
     characterRange,
+    characterRangei,
     anyCharacter,
     
     assert,
@@ -28,6 +31,7 @@ with
         attempt,
         bind,
         binds,
+        eager,
         either,
         enumeration,
         fail,
@@ -47,6 +51,25 @@ var args = \args(...) -> args;
 
 var join = (foldl, (+), '');
 
+var joinP = \p -> bind(p, always <\ join);
+
+var toLowerCase =  Function.prototype.call.bind(String.prototype.toLowerCase);
+var toUpperCase =  Function.prototype.call.bind(String.prototype.toUpperCase);
+
+var isLineTerminator = \x -> {
+    switch (x) {
+    case '\u000A':
+    case '\u000D':
+    case '\u2028':
+    case '\u2029':
+        return true;
+    default:
+        return false;
+    }
+};
+
+/* 
+ ******************************************************************************/
 var fromCharCodeParser =
     join
     \> \x -> parseInt(x, 16)
@@ -106,18 +129,32 @@ assertNot = assert <\ not;
 character = text.character;
 
 /**
+ * Match a single character case insensitively
+ */
+characteri = \[c] ->
+    text.characters(toLowerCase(c) + toUpperCase(c));
+
+/**
  * Match a character in a range.
  */
 characterRange = \start, end ->
     (gen.range(start.charCodeAt(0), end.charCodeAt(0) + 1, 1)
         |> (map, String.fromCharCode)
-        |> (foldl, (+), '')
+        |> join
         |> text.characters);
 
 /**
- * Match a single character
+ * Match a character in a range case insensitively.
  */
-anyCharacter = text.anyCharacter;
+characterRangei = \[b], [c]->
+    either(
+        characterRange(toLowerCase(b), toLowerCase(c)),
+        characterRange(toUpperCase(b), toUpperCase(c)));
+
+/**
+ * Match any character expect line terminators.
+ */
+anyCharacter = token((!) <\ isLineTerminator);
 
 /**
  * Match the first of 1 or more patterns.
@@ -138,17 +175,14 @@ choicea = args
  ******************************************************************************/
 sequence = toArray
     \> parse.enumerationa
-    \> parse.eager;
+    \> joinP;
 
-times = lang.times;
-
-between = lang.betweenTimes;
+between = joinP <<\ lang.betweenTimes;
 
 atMost = \max, p ->
     between(0, max, p);
 
-atLeast = \min, p ->
-    between(min, Infinity, p);
+atLeast = joinP <<\ lang.times;
 
 /* Running
  ******************************************************************************/
@@ -157,7 +191,7 @@ exec = \pattern, input ->
         pattern,
         input,
         new State(0, null, []),
-        \x -> x,
+        \x -> [x],
         \ -> null);
 
 

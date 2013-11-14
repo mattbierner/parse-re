@@ -9,12 +9,56 @@ function(re,
             function(){
                 var p = re.evaluate("[a]");
                 
-                var r = match.exec(p, 'a');
-                assert.deepEqual(r, ['a']);
+                assert.deepEqual(
+                    match.exec(p, 'a'),
+                    ['a']);
                 
-                var r2 = match.exec(p, 'aX');
-                assert.deepEqual(r2, ['a']);
+                assert.deepEqual(
+                    match.exec(p, 'A'),
+                    null);
+                
+                assert.deepEqual(
+                    match.exec(p, 'b'),
+                    null);
             }],
+            ["Simple Single Class I",
+            function(){
+                var p = re.evaluate("[a]", re.RE_I);
+                
+                assert.deepEqual(
+                    match.exec(p, 'a'),
+                    ['a']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'A'),
+                    ['A']);
+            }],
+            ["Leading Dash Class",
+            function(){
+                var p = re.evaluate("[-]");
+                
+                assert.deepEqual(
+                    match.exec(p, 'a'),
+                    null);
+                
+                assert.deepEqual(
+                    match.exec(p, '-'),
+                    ['-']);
+            }],
+            
+            ["Leading Dash Class",
+            function(){
+                var p = re.evaluate("[-a]");
+                
+                assert.deepEqual(
+                    match.exec(p, 'a'),
+                    ['a']);
+                
+                assert.deepEqual(
+                    match.exec(p, '-'),
+                    ['-']);
+            }],
+            
             ["Simple Multi Char class Class",
             function(){
                 var p = re.evaluate("[abc]");
@@ -32,7 +76,7 @@ function(re,
                 assert.deepEqual(rf, null);
             }],
             
-             ["Simple negated class Class",
+            ["Simple negated",
             function(){
                 var p = re.evaluate("[^abc]");
                 
@@ -53,7 +97,7 @@ function(re,
                     ['d']);
             }],
             
-            ["Simple range Char class Class",
+            ["Simple range",
             function(){
                 var p = re.evaluate("[a-c]");
                 
@@ -68,6 +112,94 @@ function(re,
                 assert.deepEqual(
                     match.exec(p, 'c'),
                     ['c']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'd'),
+                    null);
+                
+                assert.deepEqual(
+                    match.exec(p, 'A'),
+                    null);
+            }],
+            ["Being dash range",
+            function(){
+                var p = re.evaluate("[--/a]");
+                
+                assert.deepEqual(
+                    match.exec(p, 'a'),
+                    ['a']);
+                
+                assert.deepEqual(
+                    match.exec(p, '-'),
+                    ['-']);
+                
+                assert.deepEqual(
+                    match.exec(p, '.'),
+                    ['.']);
+                
+                assert.deepEqual(
+                    match.exec(p, '/'),
+                    ['/']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'A'),
+                    null);
+            }],
+            ["False range",
+            function(){
+                var p = re.evaluate("[a-]");
+                
+                assert.deepEqual(
+                    match.exec(p, 'a'),
+                    ['a']);
+                
+                assert.deepEqual(
+                    match.exec(p, '-'),
+                    ['-']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'b'),
+                    null);
+            }],
+            ["End Range Dash range",
+            function(){
+                var p = re.evaluate("[+--]");
+                
+                assert.deepEqual(
+                    match.exec(p, '+'),
+                    ['+']);
+                
+                assert.deepEqual(
+                    match.exec(p, ','),
+                    [',']);
+                
+                assert.deepEqual(
+                    match.exec(p, '-'),
+                    ['-']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'd'),
+                    null);
+                
+                assert.deepEqual(
+                    match.exec(p, 'A'),
+                    null);
+            }],
+            ["Trailing Dash range Char class Class",
+            function(){
+                var p = re.evaluate("[a-b-]");
+                
+                assert.deepEqual(
+                    match.exec(p, 'a'),
+                    ['a']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'b'),
+                    ['b']);
+                
+                assert.deepEqual(
+                    match.exec(p, '-'),
+                    ['-']);
                 
                 assert.deepEqual(
                     match.exec(p, 'd'),

@@ -4,6 +4,13 @@
 package (
     pattern,
     
+// Flags
+    RE_NONE,
+    RE_I,
+    RE_G,
+    RE_M,
+    
+// Evaluation
     evaluate)
 with
     import 'parse/parse' parse {
@@ -15,6 +22,8 @@ with
         choicea,
         either,
         enumeration,
+        fail,
+        getState,
         many,
         many1,
         next,
@@ -66,10 +75,11 @@ var decimalIntegerLiteral = bind(decimalDigits, parseInt \> always);
 var reChar = always <\ character;
 
 var classChar = \c ->
-    bind(
-        c,
-        always <\ match.character);
-
+    bind(c, \x ->
+        bind(getState, \s -> 
+            always(s & RE_I ?
+                match.characteri(x) :
+                match.character(x))));
 
 /* Escapes
  ******************************************************************************/
@@ -144,22 +154,34 @@ var classAtom = choice(
     character('-'),
     classAtomNoDash);
 
-var nonEmptyClassRangesNoDash = rec(\nonEmptyClassRangesNoDash ->
-    choice(
-        attempt <| enumeration(
+/**
+ * 
+ */
+var nonEmptyClassRangesNoDash = rec(\nonEmptyClassRangesNoDash -> let
+    classRange = binds(
+        enumeration(
             then(
                 classAtomNoDash,
                 character('-')),
-            classAtom,
-            classRanges),
-        attempt <| binds(
+            classAtom),
+        always <<\ match.characterRange)
+in
+    choice(
+        attempt <| bind(
+            enumeration(
+                classRange,
+                classRanges),
+            always <\ match.choice),
+        attempt <| bind(
             enumeration(
                 classChar(classAtomNoDash),
                 nonEmptyClassRangesNoDash),
-            always <<\ match.choicea),
-            classChar(classAtom)));
+            always <\ match.choice),
+        classChar(classAtom)));
 
-
+/**
+ * 
+ */
 var nonEmptyClassRanges = let
     classRange = binds(
         enumeration(
@@ -170,24 +192,22 @@ var nonEmptyClassRanges = let
         always <<\ match.characterRange)
 in
     choice(
-        attempt <| binds(
+        attempt <| bind(
             enumeration(
                 classRange,
                 classRanges),
-            always <\ match.choicea),
-        attempt <| binds(
+            always <\ match.choice),
+        attempt <| bind(
             enumeration(
                 classChar(classAtom),
                 nonEmptyClassRangesNoDash),
-            always <<\ match.choicea),
-            classChar(classAtom));
+            always <\ match.choice),
+        classChar(classAtom));
 
 /**
  * 
  */
-classRanges = choice(
-    nonEmptyClassRanges,
-    always(''));
+classRanges = optional(fail(), nonEmptyClassRanges);
 
 /**
  * 
@@ -229,7 +249,7 @@ var patternCharacter = token(\tok -> {
 });
 
 var atom = choice(
-    bind(patternCharacter, always <\ match.character),
+    classChar(patternCharacter),
     next(character('.'), always(match.anyCharacter)),
     bind(
         next(character('\\'), atomEscape),
@@ -254,7 +274,7 @@ var quantifierPrefix = choice(
         always([1, Infinity, true])),
     next(
         character('?'),
-        always(0, 1, true)),
+        always([0, 1, true])),
     between(character('{'), character('}'),
         binds(
             enumeration(
@@ -331,7 +351,17 @@ disjunction = bind(
  */
 pattern = disjunction;
 
+/* Evaluation
+ ******************************************************************************/
+RE_NONE = 0;
+RE_I = 1 << 0;
+RE_G = 1 << 1;
+RE_M = 1 << 2;
 
-evaluate = (parse.run, pattern);
+evaluate = \input, flags ->
+    parse.run(
+        pattern,
+        input,
+        (flags || RE_NONE));
 
 }
