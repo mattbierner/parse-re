@@ -15,31 +15,47 @@ function(re,
             }],
             ["Character Class",
             function(){
-                var p = re.evaluate("[a\\n]");
+                var p = re.evaluate("[a\\cab]");
                 
                 assert.deepEqual(
                     match.match(p, 'a'),
                     ['a']);
                 
                 assert.deepEqual(
-                    match.exec(p, '\n'),
-                    ['\n']);
+                    match.exec(p, 'b'),
+                    ['b']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'c'),
+                    null);
+                
+                assert.deepEqual(
+                    match.exec(p, '\u0001'),
+                    ['\u0001']);
             }],
             ["Character Class Range",
             function(){
-                var p = re.evaluate("[\\n-\\r]");
+                var p = re.evaluate("[\\ca-\\cc]");
                 
                 assert.deepEqual(
-                    match.match(p, '\n'),
-                    ['\n']);
+                    match.match(p, '\u0001'),
+                    ['\u0001']);
                 
                 assert.deepEqual(
-                    match.exec(p, '\r'),
-                    ['\r']);
+                    match.exec(p, '\u0002'),
+                    ['\u0002']);
                 
                 assert.deepEqual(
-                    match.exec(p, '\v'),
-                    ['\v']);
+                    match.exec(p, '\u0003'),
+                    ['\u0003']);
+
+                assert.deepEqual(
+                    match.exec(p, '\u0004'),
+                    null);
+                
+                assert.deepEqual(
+                    match.exec(p, '\u0000'),
+                    null);
             }],
         ],
     };

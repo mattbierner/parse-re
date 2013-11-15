@@ -343,7 +343,15 @@ function(re,
                 assert.deepEqual(
                     match.exec(p, '\n'),
                     null);
-
+            }],
+            
+            ["Literal \\",
+            function(){
+                var p = re.evaluate("[\\\\]");
+                
+                assert.deepEqual(
+                    match.exec(p, '\\'),
+                    ['\\']);
             }],
         ],
     };

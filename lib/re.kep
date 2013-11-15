@@ -67,6 +67,9 @@ var fromCharCodeParser =
     \> String.fromCharCode
     \> always;
 
+var notToken = \p -> 
+    token((!) <\ (test, p));
+    
 /* Data
  ******************************************************************************/
 var Data = record.declare(null, [
@@ -167,8 +170,7 @@ var decimalIntegerLiteral = bind(
     join \> parseInt \> always);
 
 var identifierPart = choice(
-    anyChar,
-    characters('$_'),
+    characters('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'),
     digit);
 
 /* Base Escapes
@@ -199,7 +201,7 @@ var decimalEscape = decimalIntegerLiteral;
  */
 var identityEscape = either(
     characters('\u200C\u200D'),
-    token((!) <\ (test, identifierPart)));
+    notToken(identifierPart));
 
 /**
  * Escape for a special characters
@@ -258,6 +260,9 @@ var characterClassEscape = choice(
 
 /* 
  ******************************************************************************/
+/**
+ * Escaped character in an atom.
+ */
 var characterEscape = choice(
     controlEscape,
     next(
@@ -267,6 +272,9 @@ var characterEscape = choice(
     unicodeEscapeSequence,
     identityEscape);
 
+/**
+ * Escaped character in a character class.
+ */
 var classEscape = choice(
     decimalEscape,
     next(
@@ -277,11 +285,14 @@ var classEscape = choice(
 
 /* Character Classes
  ******************************************************************************/
-var classAtomNoDash = either(
-    token((!) <\ (test, characters('\\-]'))),
-    next(
-        character('\\'),
-        classEscape));
+var classAtomNoDash = let 
+    reserved = characters('-]')
+in
+    either(
+        next(
+            character('\\'),
+            classEscape),
+        notToken(reserved));
 
 var classAtom = either(
     character('-'),

@@ -84,6 +84,15 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     })((function(x) {
         return parseInt(x, 16);
     }), join)));
+    var notToken = (function(p) {
+        return token((function(f, g) {
+            return (function(x) {
+                return f(g(x));
+            });
+        })((function(x) {
+            return !x;
+        }), test.bind(null, p)));
+    });
     var Data = record.declare(null, ["flags", "groups"]);
     var addGroup = (function(a, g) {
         var c = copy(a);
@@ -153,17 +162,11 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
             return f(g(x));
         });
     })(parseInt, join)));
-    var identifierPart = choice(anyChar, characters("$_"), digit);
+    var identifierPart = choice(characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_"), digit);
     var hexEscapeSequence = next(character("x"), bind(times(2, hexDigit), fromCharCodeParser));
     var unicodeEscapeSequence = next(character("u"), bind(times(4, hexDigit), fromCharCodeParser));
     var decimalEscape = decimalIntegerLiteral;
-    var identityEscape = either(characters("‌‍"), token((function(f, g) {
-        return (function(x) {
-            return f(g(x));
-        });
-    })((function(x) {
-        return !x;
-    }), test.bind(null, identifierPart))));
+    var identityEscape = either(characters("‌‍"), notToken(identifierPart));
     var controlEscape = (function() {
         {
             var map = (function(from, to) {
@@ -186,13 +189,12 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     var characterClassEscape = choice(next(character("d"), always(match.digit)), next(character("D"), always(match.nonDigit)), next(character("s"), always(match.space)), next(character("S"), always(match.nonSpace)), next(character("w"), always(match.word)), next(character("W"), always(match.nonWord)));
     var characterEscape = choice(controlEscape, next(character("c"), controlLetter), hexEscapeSequence, unicodeEscapeSequence, identityEscape);
     var classEscape = choice(decimalEscape, next(character("b"), always("\b")), characterClassEscape, characterEscape);
-    var classAtomNoDash = either(token((function(f, g) {
-        return (function(x) {
-            return f(g(x));
-        });
-    })((function(x) {
-        return !x;
-    }), test.bind(null, characters("\\-]")))), next(character("\\"), classEscape));
+    var classAtomNoDash = (function() {
+        {
+            var reserved = characters("-]");
+            return either(next(character("\\"), classEscape), notToken(reserved));
+        }
+    })();
     var classAtom = either(character("-"), classAtomNoDash);
     var rangeFor = (function() {
         {
