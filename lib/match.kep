@@ -380,7 +380,10 @@ betweenNonGreedy = joinP <<\ \min, max, p ->
 /**
  * Run `pattern` against input once and return the result.
  * 
- * returns either the set of captures or null if none.
+ * @pattern Pattern from `re`
+ * @param input Stream of input to run `pattern` against.
+ * 
+ * @return Either the set of captures or null if none.
  */
 matchStream = \{pattern, groups}, input ->
     parse.parseState(
@@ -407,7 +410,7 @@ match = \pattern, input ->
  * Run `pattern` against input incrementally until a match is found.
  * 
  * @param pattern Pattern
- * @param input Stream.
+ * @param input Stream .
  */
 execStream = \pattern, input -> {
     var result;

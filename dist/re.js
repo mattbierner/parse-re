@@ -2,9 +2,9 @@
  * THIS FILE IS AUTO GENERATED from 'lib/re.kep'
  * DO NOT EDIT
 */
-define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "parse/text", "nu/stream", "nu/gen", "parse_re/match"], (function(require, exports, record, parse, __o, __o0, __o1, gen, match) {
+define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "parse/text", "nu/stream", "nu/gen", "parse_re/match"], (function(require, exports, record, parse, __o, __o0, stream, gen, match) {
     "use strict";
-    var pattern, RE_NONE, RE_I, RE_G, RE_M, evaluate;
+    var pattern, RE_NONE, RE_I, RE_G, RE_M, evaluate, evaluateStream;
     var record = record,
         parse = parse,
         always = parse["always"],
@@ -36,10 +36,8 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
         character = __o0["character"],
         characters = __o0["characters"],
         string = __o0["string"],
-        __o1 = __o1,
-        foldl = __o1["foldl"],
-        map = __o1["map"],
-        toArray = __o1["toArray"],
+        stream = stream,
+        foldl = stream["foldl"],
         gen = gen,
         match = match;
     var disjunction = (function() {
@@ -242,16 +240,23 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     var patternCharacter = (function() {
         {
             var reserved = "^$\\.*+?()[]{}|";
-            return token((function(f, g) {
+            return matchCharacterFrom(token((function(f, g) {
                 return (function(x) {
                     return f(g(x));
                 });
             })((function(x) {
                 return !x;
-            }), test.bind(null, characters(reserved))));
+            }), test.bind(null, characters(reserved)))));
         }
     })();
-    var atom = choice(matchCharacterFrom(patternCharacter), next(character("."), always(match.anyCharacter)), next(character("\\"), atomEscape), characterClass, between(character("("), character(")"), either(next(string("?:"), disjunction), group(disjunction))));
+    var atom = choice(patternCharacter, next(character("."), always(match.anyCharacter)), next(character("\\"), atomEscape), characterClass, between(character("("), character(")"), either(next(string("?:"), disjunction), group(disjunction))));
+    var assertion = choice(next(character("^"), matchBof), next(character("$"), matchEof), next(string("\\b"), always(match.wordBoundary)), next(string("\\B"), always(match.notWordBoundary)), between(character("("), character(")"), bind(either(next(string("?="), always(match.assert)), next(string("?!"), always(match.assertNot))), (function(x) {
+        return bind(disjunction, (function(f, g) {
+            return (function(x) {
+                return f(g(x));
+            });
+        })(always, x));
+    }))));
     var quantifierPrefix = choice(next(character("*"), always([0, Infinity])), next(character("+"), always([1, Infinity])), next(character("?"), always([0, 1])), between(character("{"), character("}"), binds(enumeration(decimalIntegerLiteral, optional(null, character(",")), optional(Infinity, decimalIntegerLiteral)), (function(lower, hasUpper, upper) {
         return always((hasUpper ? [lower, upper] : [lower, lower]));
     }))));
@@ -260,13 +265,6 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
             max = __a[1];
         return always((lazy ? match.betweenNonGreedy.bind(null, min, max) : match.between.bind(null, min, max)));
     }));
-    var assertion = choice(next(character("^"), matchBof), next(character("$"), matchEof), next(string("\\b"), always(match.wordBoundary)), next(string("\\B"), always(match.notWordBoundary)), between(character("("), character(")"), bind(either(next(string("?="), always(match.assert)), next(string("?!"), always(match.assertNot))), (function(x) {
-        return bind(disjunction, (function(f, g) {
-            return (function(x) {
-                return f(g(x));
-            });
-        })(always, x));
-    }))));
     var term = either(attempt(assertion), binds(enumeration(atom, optional(identity, quantifier)), (function(atom, quantifier) {
         return always(quantifier(atom));
     })));
@@ -285,18 +283,29 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     (RE_I = (1 << 0));
     (RE_G = (1 << 1));
     (RE_M = (1 << 2));
+    (evaluateStream = (function(input, flags) {
+        return (function() {
+            {
+                var patternFlags = (flags || RE_NONE),
+                    ok = (function(_, __o1) {
+                        var __o1 = __o1,
+                            __o2 = __o1["userState"],
+                            groups = __o2["groups"];
+                        return ({
+                            "pattern": groups[0],
+                            "groups": groups,
+                            "flags": flags
+                        });
+                    }),
+                    err = (function(x) {
+                        throw x;
+                    });
+                return parse.parseStream(pattern, input, Data.create(patternFlags, []), ok, err);
+            }
+        })();
+    }));
     (evaluate = (function(input, flags) {
-        return parse.parse(pattern, input, new(Data)((flags || RE_NONE), []), (function(_, __o2) {
-            var __o2 = __o2,
-                __o3 = __o2["userState"],
-                groups = __o3["groups"];
-            return ({
-                "pattern": groups[0],
-                "groups": groups
-            });
-        }), (function(x) {
-            throw x;
-        }));
+        return evaluateStream(stream.from(input), flags);
     }));
     (exports.pattern = pattern);
     (exports.RE_NONE = RE_NONE);
@@ -304,4 +313,5 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     (exports.RE_G = RE_G);
     (exports.RE_M = RE_M);
     (exports.evaluate = evaluate);
+    (exports.evaluateStream = evaluateStream);
 }))

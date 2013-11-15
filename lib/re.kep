@@ -11,7 +11,8 @@ package (
     RE_M,
     
 // Evaluation
-    evaluate)
+    evaluate,
+    evaluateStream)
 with
     import 'amulet/record' record,
     import 'parse/parse' parse {
@@ -34,7 +35,7 @@ with
         token},
     import 'parse/lang' {between, sepBy, sepEndBy, times, then},
     import 'parse/text' {anyChar, digit, character, characters, string},
-    import 'nu/stream' {foldl, map, toArray},
+    import 'nu/stream' stream {foldl},
     import 'nu/gen' gen,
     import 'parse_re/match' match
 in {
@@ -287,7 +288,7 @@ var classAtom = either(
     classAtomNoDash);
 
 /**
- * Correctly handles false ranges where either start or end is a matcher
+ * Correctly handle false ranges where either `start` or `end` is a matcher
  * and not a single character.
  */
 var rangeFor = let 
@@ -301,6 +302,9 @@ in
                 wrap(end))) :
             matchCharacterRange(start, end));
 
+/**
+ * 
+ */
 var nonEmptyClassRangesNoDash = let
     classRange = binds(
         enumeration(
@@ -367,7 +371,9 @@ var characterClass = between(character('['), character(']'),
 /* Atom
  ******************************************************************************/
 /**
+ * Escaped atom character or pattern.
  * 
+ * Decimal escapes are treated as back references in atoms.
  */
 var atomEscape = choice(
     bind(
@@ -379,18 +385,21 @@ var atomEscape = choice(
     characterClassEscape);
 
 /**
+ * Character in an atom.
  * 
+ * Includes any character except a set of reserved ones that have special
+ * meaning in regular expressions.
  */
 var patternCharacter = let
     reserved = '^$\\.*+?()[]{}|'
 in
-    token((!) <\ (test, characters(reserved)));
+    matchCharacterFrom(token((!) <\ (test, characters(reserved))));
 
 /**
- * 
+ * Regular expression consuming matching unit.
  */
 var atom = choice(
-    matchCharacterFrom(patternCharacter),
+    patternCharacter,
     
     next(
         character('.'),
@@ -409,6 +418,37 @@ var atom = choice(
                 disjunction),
             group(disjunction))));
 
+/* Assertion
+ ******************************************************************************/
+/**
+ * Regular expression non-consuming matchers
+ */
+var assertion = choice(
+    next(
+        character('^'),
+        matchBof),
+    
+    next(
+        character('$'),
+        matchEof),
+    
+    next(
+        string('\\b'),
+        always(match.wordBoundary)),
+    
+    next(
+        string('\\B'),
+        always(match.notWordBoundary)),
+    
+    between(character('('), character(')'),
+        bind(
+            either(
+                next(string('?='), always(match.assert)),
+                next(string('?!'), always(match.assertNot))),
+            \x -> bind(disjunction, always <\ x))));
+
+/* Term
+ ******************************************************************************/
 /**
  * 
  */
@@ -437,7 +477,6 @@ var quantifierPrefix = choice(
                     [lower, lower]))));
 
 /**
- * 
  */
 var quantifier = binds(
     enumeration(
@@ -448,39 +487,8 @@ var quantifier = binds(
             (match.betweenNonGreedy, min, max) :
             (match.between, min, max)));
 
-/* Assertion
- ******************************************************************************/
 /**
- * 
- */
-var assertion = choice(
-    next(
-        character('^'),
-        matchBof),
-    
-    next(
-        character('$'),
-        matchEof),
-    
-    next(
-        string('\\b'),
-        always(match.wordBoundary)),
-    
-    next(
-        string('\\B'),
-        always(match.notWordBoundary)),
-    
-    between(character('('), character(')'),
-        bind(
-            either(
-                next(string('?='), always(match.assert)),
-                next(string('?!'), always(match.assertNot))),
-            \x -> bind(disjunction, always <\ x))));
-
-/* Pattern
- ******************************************************************************/
-/**
- * 
+ * Top level element making up regular expressions
  */
 var term = either(
     attempt <| assertion,
@@ -491,42 +499,71 @@ var term = either(
         \atom, quantifier ->
             always(quantifier(atom))));
 
-/**
- * 
- */
+/* Pattern
+ ******************************************************************************/
 var alternative = bind(
     many(term),
     always <\ match.chains);
 
-/**
- * 
- */
 disjunction = bind(
     sepBy(character('|'),
         alternative),
     always <\ match.anys);
 
 /**
- * 
+ * Top level parser for a regular expression.
  */
 pattern = group(disjunction);
 
 /* Evaluation
  ******************************************************************************/
+/**
+ * RE_I - Match case insensitively
+ * RE_G - Match globally. Has no effect on resulting regexp but on how it is
+ *    executed.
+ * RE_M - `^` and `$` also match state of lines and end of lines respectively.
+ */
 RE_NONE = 0;
 RE_I = 1 << 0;
 RE_G = 1 << 1;
 RE_M = 1 << 2;
 
-evaluate = \input, flags ->
-    parse.parse(
+/**
+ * Map input specifying a regular expression to an opaque matcher object
+ * encapsulating the behavior of that regular expression.
+ * 
+ * Errors if the regular expression is invalid.
+ * 
+ * @param input Stream of characters specifying a regular expression.
+ * @param [flags] Flags that control the behavior of the resulting
+ *     matcher.
+ */
+evaluateStream = \input, flags -> let
+    patternFlags = (flags || RE_NONE),
+    
+    ok = \_, {'userState':{groups}} -> ({
+        'pattern': groups[0],
+        'groups': groups,
+        'flags': flags
+    }),
+    
+    err = \x -> { throw x; }
+in 
+    parse.parseStream(
         pattern,
         input,
-        new Data((flags || RE_NONE), []),
-        \_, {'userState':{groups}} -> ({
-            'pattern': groups[0],
-            'groups': groups
-        }),
-        \x -> { throw x; });
+        Data.create(patternFlags, []),
+        ok,
+        err);
+
+/**
+ * @see evaluateStream
+ * 
+ * @param input Array like of characters input.
+ */
+evaluate = \input, flags ->
+    evaluateStream(
+        stream.from(input),
+        flags);
 
 }

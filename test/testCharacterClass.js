@@ -186,6 +186,59 @@ function(re,
                     match.exec(p, 'D'),
                     null);
             }],
+            ["Range I Does not intro out of range chars",
+            function(){
+                var p = re.evaluate("[E-F]", re.RE_I);
+                
+                assert.deepEqual(
+                    match.exec(p, 'E'),
+                    ['E']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'F'),
+                    ['F']);
+                
+                assert.deepEqual(
+                    match.exec(p, '['),
+                    null);
+                
+                assert.deepEqual(
+                    match.exec(p, 'e'),
+                    ['e']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'f'),
+                    ['f']);
+            }],
+            ["Range I uses original range, not case insensitive one",
+            function(){
+                var p = re.evaluate("[E-f]", re.RE_I);
+                
+                assert.deepEqual(
+                    match.exec(p, 'E'),
+                    ['E']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'F'),
+                    ['F']);
+                
+                assert.deepEqual(
+                    match.exec(p, '['),
+                    ['[']);
+                
+                assert.deepEqual(
+                    match.exec(p, '`'),
+                    ['`']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'e'),
+                    ['e']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'f'),
+                    ['f']);
+            }],
+            
             ["Being dash range",
             function(){
                 var p = re.evaluate("[--/a]");
@@ -275,7 +328,7 @@ function(re,
                     null);
             }],
 
-            ["Escaped Character Class Range",
+            ["Escaped Character Class Range parses to choice",
             function(){
                 var p = re.evaluate("[\\w- ]");
                 
