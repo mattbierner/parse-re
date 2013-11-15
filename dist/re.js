@@ -172,7 +172,15 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
             return choice(map("t", "\t"), map("n", "\n"), map("v", "\u000b"), map("f", "\f"), map("r", "\r"));
         }
     })();
-    var controlLetter = bind(characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), always(String.fromCharCode((function(x) {
+    var controlLetter = bind(characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), (function(f, g) {
+        return (function(x) {
+            return f(g(x));
+        });
+    })(always, (function(f, g) {
+        return (function(x) {
+            return f(g(x));
+        });
+    })(String.fromCharCode, (function(x) {
         return (x.charCodeAt(0) % 32);
     }))));
     var characterClassEscape = choice(next(character("d"), always(match.digit)), next(character("D"), always(match.nonDigit)), next(character("s"), always(match.space)), next(character("S"), always(match.nonSpace)), next(character("w"), always(match.word)), next(character("W"), always(match.nonWord)));

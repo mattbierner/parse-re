@@ -223,8 +223,8 @@ in
 var controlLetter = bind(
     characters('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ'),
     \x -> x.charCodeAt(0) % 32
-        |> String.fromCharCode
-        |> always);
+        \> String.fromCharCode
+        \> always);
 
 /* Escapes Matchers
  ******************************************************************************/
