@@ -5,6 +5,22 @@ function(re,
     return {
         'module': "Character Class",
         'tests': [
+           ["Empty always fails",
+            function(){
+                var p = re.evaluate("[]");
+                
+                assert.deepEqual(
+                    match.exec(p, ''),
+                    null);
+                
+                assert.deepEqual(
+                    match.exec(p, 'a'),
+                    null);
+                
+                assert.deepEqual(
+                    match.exec(p, '[]'),
+                    null);
+            }],
             ["Simple Single Class",
             function(){
                 var p = re.evaluate("[a]");
@@ -20,6 +36,18 @@ function(re,
                 assert.deepEqual(
                     match.exec(p, 'b'),
                     null);
+            }],
+            ["Space",
+            function(){
+                var p = re.evaluate("[ ]");
+                
+                assert.deepEqual(
+                    match.exec(p, 'a'),
+                    null);
+                
+                assert.deepEqual(
+                    match.exec(p, ' '),
+                    [' ']);
             }],
             ["Simple Single Class I",
             function(){
@@ -247,6 +275,23 @@ function(re,
                     null);
             }],
 
+            ["Escaped Character Class Range",
+            function(){
+                var p = re.evaluate("[\\w- ]");
+                
+                assert.deepEqual(
+                    match.exec(p, ' '),
+                    [' ']);
+                
+                assert.deepEqual(
+                    match.exec(p, '-'),
+                    ['-']);
+                
+                assert.deepEqual(
+                    match.exec(p, '\n'),
+                    null);
+
+            }],
         ],
     };
 });

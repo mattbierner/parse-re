@@ -1,7 +1,9 @@
 /**
- * 
+ * @fileOverview Matchers and running regular expressions.
  */
 package (
+    notToken,
+    
 // Characters
     character,
     characteri,
@@ -28,7 +30,9 @@ package (
     eol,
 
 // 
+    nothing,
     anys,
+    any,
     chains,
     
 // Quantifiers
@@ -52,21 +56,19 @@ with
         always,
         attempt,
         bind,
-        binds,
-        eager,
+        choice,
+        choices,
         either,
-        enumeration,
+        enumerations,
         getState,
-        modifyState,
         fail,
         lookahead,
-        many,
-        many1,
+        modifyState,
         next,
         token},
-    import 'parse/lang' lang {sepBy, sepEndBy, then},
-    import 'parse/text' text {characters, string},
-    import 'nu/stream' stream {first, rest, isEmpty, foldl, map, toArray},
+    import 'parse/lang' {betweenTimes, times},
+    import 'parse/text' text,
+    import 'nu/stream' stream {isEmpty, foldl, map, rest, 'end': NIL},
     import 'nu/gen' {range}
 in {
 
@@ -274,7 +276,8 @@ characterRange =
  * Match a character in a range case insensitively.
  */
 characterRangei = \b, c ->
-    either(
+    choice(
+        characterRange(b, c),
         characterRange(toLowerCase(b), toLowerCase(c)),
         characterRange(toUpperCase(b), toUpperCase(c)));
 
@@ -285,7 +288,7 @@ anyCharacter = token((!) <\ isLineTerminator);
 
 /* Character Class Matchers
  ******************************************************************************/
-var notToken = \p ->
+notToken = \p ->
     token((!) <\ (parse.test, p));
 
 /**
@@ -321,13 +324,23 @@ nonWord = notToken <| word;
 /* Parsers
  ******************************************************************************/
 /**
+ * Matches nothing.
+ */
+nothing = fail();
+
+/**
  * Match the first of 1 or more patterns.
  * 
  * @param s Stream of patterns.
  */
-anys = (map, attempt) \> parse.choices;
+anys = (map, attempt) \> choices;
 
-chains = parse.enumerations \> joinP;
+/**
+ * Match the first of 1 or more patterns.
+ */
+any = args \>> stream.from \>> anys;
+
+chains = enumerations \> joinP;
 
 /* Quantifiers
  ******************************************************************************/
@@ -341,16 +354,16 @@ chains = parse.enumerations \> joinP;
  * @TODO: pretty damn ugly. 
  */
 atMost = \max, p ->
-    (max === 0 ? always(stream.end) :
+    (max === 0 ? always(NIL) :
         \state, m, cok, cerr, eok, eerr -> 
-            let r = parse.trampoline <| eok(stream.end, state, m) in
+            let r = parse.trampoline <| eok(NIL, state, m) in
                 (r ? r :
                     parse.cons(p, atMost(max, p))(state, m, cok, cerr, eok, eerr)));
 
 /**
  * Greedily match a parser between `min` and `max` times.
  */
-between = lang.betweenTimes \>> joinP;
+between = betweenTimes \>> joinP;
 
 /**
  * Non-Greedily match a parser between `min` and `max` times.
@@ -359,7 +372,7 @@ between = lang.betweenTimes \>> joinP;
  */
 betweenNonGreedy = joinP <<\ \min, max, p ->
     parse.append(
-        lang.times(min, p),
+        times(min, p),
         atMost(max - min, p));
 
 /* Running

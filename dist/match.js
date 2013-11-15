@@ -2,42 +2,36 @@
  * THIS FILE IS AUTO GENERATED from 'lib/match.kep'
  * DO NOT EDIT
 */
-define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "parse/text", "nu/stream", "nu/gen"], (function(require, exports, record, parse, lang, text, stream, __o) {
+define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "parse/text", "nu/stream", "nu/gen"], (function(require, exports, record, parse, __o, text, stream, __o0) {
     "use strict";
-    var character, characteri, characterRange, characterRangei, anyCharacter, digit, nonDigit, space, nonSpace, word, nonWord, assert, assertNot, wordBoundary, notWordBoundary, bof, bol, eof, eol, anys, chains, between, betweenNonGreedy, atMost, group, backReference, matchStream, match, execStream, exec;
+    var notToken, character, characteri, characterRange, characterRangei, anyCharacter, digit, nonDigit, space, nonSpace, word, nonWord, assert, assertNot, wordBoundary, notWordBoundary, bof, bol, eof, eol, nothing, anys, any, chains, between, betweenNonGreedy, atMost, group, backReference, matchStream, match, execStream, exec;
     var record = record,
         parse = parse,
         always = parse["always"],
         attempt = parse["attempt"],
         bind = parse["bind"],
-        binds = parse["binds"],
-        eager = parse["eager"],
+        choice = parse["choice"],
+        choices = parse["choices"],
         either = parse["either"],
-        enumeration = parse["enumeration"],
+        enumerations = parse["enumerations"],
         getState = parse["getState"],
-        modifyState = parse["modifyState"],
         fail = parse["fail"],
         lookahead = parse["lookahead"],
-        many = parse["many"],
-        many1 = parse["many1"],
+        modifyState = parse["modifyState"],
         next = parse["next"],
         token = parse["token"],
-        lang = lang,
-        sepBy = lang["sepBy"],
-        sepEndBy = lang["sepEndBy"],
-        then = lang["then"],
+        __o = __o,
+        betweenTimes = __o["betweenTimes"],
+        times = __o["times"],
         text = text,
-        characters = text["characters"],
-        string = text["string"],
         stream = stream,
-        first = stream["first"],
-        rest = stream["rest"],
         isEmpty = stream["isEmpty"],
         foldl = stream["foldl"],
         map = stream["map"],
-        toArray = stream["toArray"],
-        __o = __o,
-        range = __o["range"];
+        rest = stream["rest"],
+        NIL = stream["end"],
+        __o0 = __o0,
+        range = __o0["range"];
     var toLowerCase = Function.prototype.call.bind(String.prototype.toLowerCase);
     var toUpperCase = Function.prototype.call.bind(String.prototype.toUpperCase);
     var indexOf = Function.prototype.call.bind(Array.prototype.indexOf);
@@ -167,10 +161,10 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
         })));
     }));
     (backReference = (function(i) {
-        return bind(getState, (function(__o0) {
-            var __o0 = __o0,
-                captures = __o0["captures"],
-                groups = __o0["groups"];
+        return bind(getState, (function(__o1) {
+            var __o1 = __o1,
+                captures = __o1["captures"],
+                groups = __o1["groups"];
             return (has(captures, i) ? text.string(captures[i]) : (has(groups, i) ? empty : fail()));
         }));
     }));
@@ -194,7 +188,7 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
         return range(start.charCodeAt(0), (end.charCodeAt(0) + 1), 1);
     })))));
     (characterRangei = (function(b, c) {
-        return either(characterRange(toLowerCase(b), toLowerCase(c)), characterRange(toUpperCase(b), toUpperCase(c)));
+        return choice(characterRange(b, c), characterRange(toLowerCase(b), toLowerCase(c)), characterRange(toUpperCase(b), toUpperCase(c)));
     }));
     (anyCharacter = token((function(f, g) {
         return (function(x) {
@@ -203,7 +197,7 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     })((function(x) {
         return !x;
     }), isLineTerminator)));
-    var notToken = (function(p) {
+    (notToken = (function(p) {
         return token((function(f, g) {
             return (function(x) {
                 return f(g(x));
@@ -211,28 +205,38 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
         })((function(x) {
             return !x;
         }), parse.test.bind(null, p)));
-    });
+    }));
     (digit = characterRange("0", "9"));
     (nonDigit = notToken(digit));
     (space = text.characters("\t\u000b\f  ﻿\n\r\u2028\u2029"));
     (nonSpace = notToken(space));
     (word = text.characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"));
     (nonWord = notToken(word));
+    (nothing = fail());
     (anys = (function(f, g) {
         return (function(x) {
             return f(g(x));
         });
-    })(parse.choices, map.bind(null, attempt)));
+    })(choices, map.bind(null, attempt)));
+    (any = (function(f, g) {
+        return (function() {
+            return f(g.apply(null, arguments));
+        });
+    })(anys, (function(f, g) {
+        return (function() {
+            return f(g.apply(null, arguments));
+        });
+    })(stream.from, args)));
     (chains = (function(f, g) {
         return (function(x) {
             return f(g(x));
         });
-    })(joinP, parse.enumerations));
+    })(joinP, enumerations));
     (atMost = (function(max, p) {
-        return ((max === 0) ? always(stream.end) : (function(state, m, cok, cerr, eok, eerr) {
+        return ((max === 0) ? always(NIL) : (function(state, m, cok, cerr, eok, eerr) {
             return (function() {
                 {
-                    var r = parse.trampoline(eok(stream.end, state, m));
+                    var r = parse.trampoline(eok(NIL, state, m));
                     return (r ? r : parse.cons(p, atMost(max, p))(state, m, cok, cerr, eok, eerr));
                 }
             })();
@@ -242,18 +246,18 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
         return (function() {
             return f(g.apply(null, arguments));
         });
-    })(joinP, lang.betweenTimes));
+    })(joinP, betweenTimes));
     (betweenNonGreedy = (function(f, g) {
         return (function() {
             return f(g.apply(null, arguments));
         });
     })(joinP, (function(min, max, p) {
-        return parse.append(lang.times(min, p), atMost((max - min), p));
+        return parse.append(times(min, p), atMost((max - min), p));
     })));
-    (matchStream = (function(__o0, input) {
-        var __o0 = __o0,
-            pattern = __o0["pattern"],
-            groups = __o0["groups"];
+    (matchStream = (function(__o1, input) {
+        var __o1 = __o1,
+            pattern = __o1["pattern"],
+            groups = __o1["groups"];
         return parse.parseState(pattern, State.create(input, parse.Position.initial, Data.create(groups, new(Array)(groups.length)), null), (function(_, s) {
             return s.userState.captures;
         }), (function() {
@@ -278,6 +282,7 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     (exec = (function(pattern, input) {
         return execStream(pattern, stream.from(input));
     }));
+    (exports.notToken = notToken);
     (exports.character = character);
     (exports.characteri = characteri);
     (exports.characterRange = characterRange);
@@ -297,7 +302,9 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     (exports.bol = bol);
     (exports.eof = eof);
     (exports.eol = eol);
+    (exports.nothing = nothing);
     (exports.anys = anys);
+    (exports.any = any);
     (exports.chains = chains);
     (exports.between = between);
     (exports.betweenNonGreedy = betweenNonGreedy);
