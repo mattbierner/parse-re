@@ -7,7 +7,7 @@ function(re,
         'tests': [
             ["Simple",
             function(){
-                var p = re.evaluate("a|b");
+                var p = re.compile("a|b");
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -23,7 +23,7 @@ function(re,
             }],
             ["Takes first",
             function(){
-                var p = re.evaluate("a|ab");
+                var p = re.compile("a|ab");
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -35,7 +35,7 @@ function(re,
             }],
             ["Backtracks on fail",
             function(){
-                var p = re.evaluate("abx|abc");
+                var p = re.compile("abx|abc");
                 
                 assert.deepEqual(
                     match.exec(p, 'abx'),
@@ -47,7 +47,7 @@ function(re,
             }],
             ["Disjunction subgroups all counted",
             function(){
-                var p = re.evaluate("(a(b))|(b)");
+                var p = re.compile("(a(b))|(b)");
 
                 assert.deepEqual(
                     match.exec(p, 'ab'),

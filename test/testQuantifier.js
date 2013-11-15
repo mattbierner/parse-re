@@ -7,7 +7,7 @@ function(re,
         'tests': [
             ["Simple +",
             function(){
-                var p = re.evaluate("a+");
+                var p = re.compile("a+");
                 
                 assert.deepEqual(
                     match.exec(p, ''),
@@ -27,7 +27,7 @@ function(re,
             }],
             ["Simple *",
             function(){
-                var p = re.evaluate("a*");
+                var p = re.compile("a*");
                 
                 assert.deepEqual(
                     match.exec(p, ''),
@@ -51,7 +51,7 @@ function(re,
             }],
             ["Simple ?",
             function(){
-                var p = re.evaluate("a?");
+                var p = re.compile("a?");
                 
                 assert.deepEqual(
                     match.exec(p, ''),
@@ -71,7 +71,7 @@ function(re,
             }],
             ["Simple Range",
             function(){
-                var p = re.evaluate("a{1,2}");
+                var p = re.compile("a{1,2}");
                 
                 assert.deepEqual(
                     match.exec(p, ''),
@@ -95,7 +95,7 @@ function(re,
             }],
             ["No upper Range",
             function(){
-                var p = re.evaluate("a{1,}");
+                var p = re.compile("a{1,}");
                 
                 assert.deepEqual(
                     match.exec(p, ''),
@@ -119,7 +119,7 @@ function(re,
             }],
             ["Single Range",
             function(){
-                var p = re.evaluate("a{1}");
+                var p = re.compile("a{1}");
                 
                 assert.deepEqual(
                     match.exec(p, ''),
@@ -144,7 +144,7 @@ function(re,
             
             ["Lazy +",
             function(){
-                var p = re.evaluate("a+?");
+                var p = re.compile("a+?");
                 
                 assert.deepEqual(
                     match.exec(p, ''),
@@ -164,7 +164,7 @@ function(re,
             }],
             ["Lazy + consumes as many as required",
             function(){
-                var p = re.evaluate("a+?b");
+                var p = re.compile("a+?b");
                 
                 assert.deepEqual(
                     match.exec(p, 'aabaa'),
@@ -172,7 +172,7 @@ function(re,
             }],
             ["Lazy *",
             function(){
-                var p = re.evaluate("a*?");
+                var p = re.compile("a*?");
                 
                 assert.deepEqual(
                     match.exec(p, ''),
@@ -196,7 +196,7 @@ function(re,
             }],
             ["Lazy ?",
             function(){
-                var p = re.evaluate("a??");
+                var p = re.compile("a??");
                 
                 assert.deepEqual(
                     match.exec(p, ''),
@@ -216,7 +216,7 @@ function(re,
             }],
             ["Lazy ? consumes as many as required",
             function(){
-                var p = re.evaluate("a??b");
+                var p = re.compile("a??b");
                 
                 assert.deepEqual(
                     match.exec(p, 'ab'),
@@ -225,7 +225,7 @@ function(re,
             
             ["Lazy Range",
             function(){
-                var p = re.evaluate("a{2,}?b");
+                var p = re.compile("a{2,}?b");
                 
                 assert.deepEqual(
                     match.exec(p, 'ab'),

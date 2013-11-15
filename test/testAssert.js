@@ -7,7 +7,7 @@ function(re,
         'tests': [
             ["Simple",
             function(){
-                var p = re.evaluate("a(?=b)");
+                var p = re.compile("a(?=b)");
                 
                 assert.deepEqual(
                     match.match(p, 'ab'),
@@ -19,7 +19,7 @@ function(re,
             }],
             ["Consumes Nothing",
             function(){
-                var p = re.evaluate("a(?=b)b+");
+                var p = re.compile("a(?=b)b+");
                 
                 assert.deepEqual(
                     match.match(p, 'abb'),
@@ -27,7 +27,7 @@ function(re,
             }],
             ["With Group",
             function(){
-                var p = re.evaluate("b(?=(a+))");
+                var p = re.compile("b(?=(a+))");
                 
                 assert.deepEqual(
                     match.match(p, 'baaac'),
@@ -36,7 +36,7 @@ function(re,
             
             ["No backtrack",
             function(){
-                var p = re.evaluate("(?=(a+))a*b\\1");
+                var p = re.compile("(?=(a+))a*b\\1");
                 
                 assert.deepEqual(
                     match.exec(p, 'baaabac'),

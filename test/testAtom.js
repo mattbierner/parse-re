@@ -7,7 +7,7 @@ function(re,
         'tests': [
               ["Noop",
             function(){
-                var p = re.evaluate("");
+                var p = re.compile("");
                 
                 var r = match.exec(p, '');
                 assert.deepEqual(r, ['']);
@@ -15,7 +15,7 @@ function(re,
 
             ["Simple Atom",
             function(){
-                var p = re.evaluate("a");
+                var p = re.compile("a");
                 
                 var r = match.exec(p, 'a');
                 assert.deepEqual(r, ['a']);
@@ -25,7 +25,7 @@ function(re,
             }],
             ["Exec Atom",
             function(){
-                var p = re.evaluate("a");
+                var p = re.compile("a");
                 
                 var r = match.exec(p, 'bba');
                 assert.deepEqual(r, ['a']);
@@ -35,7 +35,7 @@ function(re,
             }],
             ["Simple Atom I",
             function(){
-                var p = re.evaluate("a", re.RE_I);
+                var p = re.compile("a", re.RE_I);
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -50,7 +50,7 @@ function(re,
             }],
             ["Simple Multiple Atoms",
             function(){
-                var p = re.evaluate("ab");
+                var p = re.compile("ab");
                 
                 assert.deepEqual(
                     match.exec(p, 'ab'),
@@ -63,7 +63,7 @@ function(re,
             
             ["Any Atom",
             function(){
-                var p = re.evaluate(".", re.RE_I);
+                var p = re.compile(".", re.RE_I);
                 
                 for (var i = 32 ; i < 127; ++i) {
                     var c = String.fromCharCode(i);

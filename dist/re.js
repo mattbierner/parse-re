@@ -4,7 +4,7 @@
 */
 define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "parse/text", "nu/stream", "nu/gen", "parse_re/match"], (function(require, exports, record, parse, __o, __o0, stream, gen, match) {
     "use strict";
-    var pattern, RE_NONE, RE_I, RE_G, RE_M, evaluate, evaluateStream;
+    var pattern, RE_NONE, RE_I, RE_G, RE_M, compileStream, compile;
     var record = record,
         parse = parse,
         always = parse["always"],
@@ -69,21 +69,23 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
 
         return out;
     });
-    var fromCharCodeParser = (function(f, g) {
-        return (function(x) {
-            return f(g(x));
-        });
-    })(always, (function(f, g) {
-        return (function(x) {
-            return f(g(x));
-        });
-    })(String.fromCharCode, (function(f, g) {
-        return (function(x) {
-            return f(g(x));
-        });
-    })((function(x) {
-        return parseInt(x, 16);
-    }), join)));
+    var fromCharCodeP = (function(p) {
+        return bind(p, (function(f, g) {
+            return (function(x) {
+                return f(g(x));
+            });
+        })(always, (function(f, g) {
+            return (function(x) {
+                return f(g(x));
+            });
+        })(String.fromCharCode, (function(f, g) {
+            return (function(x) {
+                return f(g(x));
+            });
+        })((function(x) {
+            return parseInt(x, 16);
+        }), join))));
+    });
     var notToken = (function(p) {
         return token((function(f, g) {
             return (function(x) {
@@ -163,8 +165,8 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
         });
     })(parseInt, join)));
     var identifierPart = choice(characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_"), digit);
-    var hexEscapeSequence = next(character("x"), bind(times(2, hexDigit), fromCharCodeParser));
-    var unicodeEscapeSequence = next(character("u"), bind(times(4, hexDigit), fromCharCodeParser));
+    var hexEscapeSequence = next(character("x"), fromCharCodeP(times(2, hexDigit)));
+    var unicodeEscapeSequence = next(character("u"), fromCharCodeP(times(4, hexDigit)));
     var decimalEscape = decimalIntegerLiteral;
     var identityEscape = either(characters("‌‍"), notToken(identifierPart));
     var controlEscape = (function() {
@@ -297,35 +299,35 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     (RE_I = (1 << 0));
     (RE_G = (1 << 1));
     (RE_M = (1 << 2));
-    (evaluateStream = (function(input, flags) {
+    (compileStream = (function(input, flags) {
         return (function() {
             {
-                var patternFlags = (flags || RE_NONE),
-                    ok = (function(_, __o1) {
-                        var __o1 = __o1,
-                            __o2 = __o1["userState"],
-                            groups = __o2["groups"];
-                        return ({
-                            "pattern": groups[0],
-                            "groups": groups,
-                            "flags": flags
-                        });
-                    }),
+                var ok = (function(_, __o1) {
+                    var __o1 = __o1,
+                        __o2 = __o1["userState"],
+                        groups = __o2["groups"],
+                        flags = __o2["flags"];
+                    return ({
+                        "pattern": groups[0],
+                        "groups": groups,
+                        "flags": flags
+                    });
+                }),
                     err = (function(x) {
                         throw x;
                     });
-                return parse.parseStream(pattern, input, Data.create(patternFlags, []), ok, err);
+                return parse.parseStream(pattern, input, Data.create((flags || RE_NONE), []), ok, err);
             }
         })();
     }));
-    (evaluate = (function(input, flags) {
-        return evaluateStream(stream.from(input), flags);
+    (compile = (function(input, flags) {
+        return compileStream(stream.from(input), flags);
     }));
     (exports.pattern = pattern);
     (exports.RE_NONE = RE_NONE);
     (exports.RE_I = RE_I);
     (exports.RE_G = RE_G);
     (exports.RE_M = RE_M);
-    (exports.evaluate = evaluate);
-    (exports.evaluateStream = evaluateStream);
+    (exports.compileStream = compileStream);
+    (exports.compile = compile);
 }))

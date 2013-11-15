@@ -7,7 +7,7 @@ function(re,
         'tests': [
            ["Empty always fails",
             function(){
-                var p = re.evaluate("[]");
+                var p = re.compile("[]");
                 
                 assert.deepEqual(
                     match.exec(p, ''),
@@ -23,7 +23,7 @@ function(re,
             }],
             ["Simple Single Class",
             function(){
-                var p = re.evaluate("[a]");
+                var p = re.compile("[a]");
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -39,7 +39,7 @@ function(re,
             }],
             ["Space",
             function(){
-                var p = re.evaluate("[ ]");
+                var p = re.compile("[ ]");
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -51,7 +51,7 @@ function(re,
             }],
             ["Simple Single Class I",
             function(){
-                var p = re.evaluate("[a]", re.RE_I);
+                var p = re.compile("[a]", re.RE_I);
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -63,7 +63,7 @@ function(re,
             }],
             ["Leading Dash Class",
             function(){
-                var p = re.evaluate("[-]");
+                var p = re.compile("[-]");
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -76,7 +76,7 @@ function(re,
             
             ["Leading Dash Class",
             function(){
-                var p = re.evaluate("[-a]");
+                var p = re.compile("[-a]");
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -89,7 +89,7 @@ function(re,
             
             ["Simple Multi Char class Class",
             function(){
-                var p = re.evaluate("[abc]");
+                var p = re.compile("[abc]");
                 
                 var r = match.exec(p, 'a');
                 assert.deepEqual(r, ['a']);
@@ -106,7 +106,7 @@ function(re,
             
             ["Simple negated",
             function(){
-                var p = re.evaluate("[^abc]");
+                var p = re.compile("[^abc]");
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -127,7 +127,7 @@ function(re,
             
             ["Simple range",
             function(){
-                var p = re.evaluate("[a-c]");
+                var p = re.compile("[a-c]");
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -156,7 +156,7 @@ function(re,
              
             ["Simple range I",
             function(){
-                var p = re.evaluate("[a-c]", re.RE_I);
+                var p = re.compile("[a-c]", re.RE_I);
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -188,7 +188,7 @@ function(re,
             }],
             ["Range I Does not intro out of range chars",
             function(){
-                var p = re.evaluate("[E-F]", re.RE_I);
+                var p = re.compile("[E-F]", re.RE_I);
                 
                 assert.deepEqual(
                     match.exec(p, 'E'),
@@ -212,7 +212,7 @@ function(re,
             }],
             ["Range I uses original range, not case insensitive one",
             function(){
-                var p = re.evaluate("[E-f]", re.RE_I);
+                var p = re.compile("[E-f]", re.RE_I);
                 
                 assert.deepEqual(
                     match.exec(p, 'E'),
@@ -241,7 +241,7 @@ function(re,
             
             ["Being dash range",
             function(){
-                var p = re.evaluate("[--/a]");
+                var p = re.compile("[--/a]");
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -265,7 +265,7 @@ function(re,
             }],
             ["False range",
             function(){
-                var p = re.evaluate("[a-]");
+                var p = re.compile("[a-]");
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -281,7 +281,7 @@ function(re,
             }],
             ["End Range Dash range",
             function(){
-                var p = re.evaluate("[+--]");
+                var p = re.compile("[+--]");
                 
                 assert.deepEqual(
                     match.exec(p, '+'),
@@ -305,7 +305,7 @@ function(re,
             }],
             ["Trailing Dash range Char class Class",
             function(){
-                var p = re.evaluate("[a-b-]");
+                var p = re.compile("[a-b-]");
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -330,7 +330,7 @@ function(re,
 
             ["Escaped Character Class Range parses to choice",
             function(){
-                var p = re.evaluate("[\\w- ]");
+                var p = re.compile("[\\w- ]");
                 
                 assert.deepEqual(
                     match.exec(p, ' '),
@@ -347,7 +347,7 @@ function(re,
             
             ["Literal \\",
             function(){
-                var p = re.evaluate("[\\\\]");
+                var p = re.compile("[\\\\]");
                 
                 assert.deepEqual(
                     match.exec(p, '\\'),
@@ -355,7 +355,7 @@ function(re,
             }],
              ["Literal -",
             function(){
-                var p = re.evaluate("[a\\-c]");
+                var p = re.compile("[a\\-c]");
                 
                 assert.deepEqual(
                     match.exec(p, 'a'),
@@ -376,7 +376,7 @@ function(re,
             
             ["Literal \\b is not word bounary",
             function(){
-                var p = re.evaluate("[\\b]");
+                var p = re.compile("[\\b]");
                 
                 assert.deepEqual(
                     match.exec(p, '\u0008'),
@@ -384,7 +384,7 @@ function(re,
             }],
             ["Escaped numbers are not backreferends but code points",
             function(){
-                var p = re.evaluate("[\\1]");
+                var p = re.compile("[\\1]");
                 
                 assert.deepEqual(
                     match.exec(p, '\u0001'),

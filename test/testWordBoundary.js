@@ -7,7 +7,7 @@ function(re,
         'tests': [
             ["Simple",
             function(){
-                var p = re.evaluate("a \\ba");
+                var p = re.compile("a \\ba");
                 
                 assert.deepEqual(
                     match.exec(p, ''),
@@ -19,7 +19,7 @@ function(re,
             }],
             ["Starting",
             function(){
-                var p = re.evaluate("\\ba");
+                var p = re.compile("\\ba");
                 
                 assert.deepEqual(
                     match.exec(p, ''),
@@ -35,7 +35,7 @@ function(re,
             }],
             ["Ending",
             function(){
-                var p = re.evaluate("a\\b");
+                var p = re.compile("a\\b");
                 
                 assert.deepEqual(
                     match.exec(p, ''),
@@ -51,7 +51,7 @@ function(re,
             }],
             ["Line Terminator",
             function(){
-                var p = re.evaluate("a[^]\\ba");
+                var p = re.compile("a[^]\\ba");
                 
                 assert.deepEqual(
                     match.exec(p, 'a\na'),
@@ -59,7 +59,7 @@ function(re,
             }],
             ["Does not check forward",
             function(){
-                var p = re.evaluate("a\\b a");
+                var p = re.compile("a\\b a");
                 
                 assert.deepEqual(
                     match.exec(p, 'a a'),

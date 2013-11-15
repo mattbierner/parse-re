@@ -7,7 +7,7 @@ function(re,
         'tests': [
             ["Simple Single group",
             function(){
-                var p = re.evaluate("(a)");
+                var p = re.compile("(a)");
                 
                 assert.deepEqual(
                     match.match(p, 'a'),
@@ -19,7 +19,7 @@ function(re,
             }],
             ["Single group top level contains entire group",
             function(){
-                var p = re.evaluate("a(b)");
+                var p = re.compile("a(b)");
                 
                 assert.deepEqual(
                     match.match(p, 'ab'),
@@ -32,7 +32,7 @@ function(re,
             
             ["Multiple Group Ordering",
             function(){
-                var p = re.evaluate("(a)(b)(c)");
+                var p = re.compile("(a)(b)(c)");
                 
                 assert.deepEqual(
                     match.match(p, 'abc'),
@@ -40,7 +40,7 @@ function(re,
             }],
             ["Nested Groups Ordering",
             function(){
-                var p = re.evaluate("(a(b(c))d)");
+                var p = re.compile("(a(b(c))d)");
                 
                 assert.deepEqual(
                     match.match(p, 'abcd'),
@@ -49,7 +49,7 @@ function(re,
             
             ["Non capturing group",
             function(){
-                var p = re.evaluate("(a(?:b(c))d)");
+                var p = re.compile("(a(?:b(c))d)");
                 
                 assert.deepEqual(
                     match.match(p, 'abcd'),
@@ -58,7 +58,7 @@ function(re,
             
             ["Back Reference",
             function(){
-                var p = re.evaluate("(.)\\1");
+                var p = re.compile("(.)\\1");
                 
                 assert.deepEqual(
                     match.match(p, 'aa'),
@@ -71,7 +71,7 @@ function(re,
              
             ["Non existant Back Reference always fails",
             function(){
-                var p = re.evaluate("(.)\\2");
+                var p = re.compile("(.)\\2");
                 
                 assert.deepEqual(
                     match.match(p, 'aa'),
@@ -83,7 +83,7 @@ function(re,
             }],
             ["Forward Back Reference is empty",
             function(){
-                var p = re.evaluate("(.)\\2(.)(.)");
+                var p = re.compile("(.)\\2(.)(.)");
                 
                 assert.deepEqual(
                     match.match(p, 'abc'),
@@ -91,7 +91,7 @@ function(re,
             }],
              ["Forward Back Reference makes self empty",
             function(){
-                var p = re.evaluate("(.)(\\2)(.)");
+                var p = re.compile("(.)(\\2)(.)");
                 
                 assert.deepEqual(
                     match.match(p, 'abc'),
@@ -100,7 +100,7 @@ function(re,
             }],
             ["Back Reference to self is nop",
             function(){
-                var p = re.evaluate("(.\\1.)");
+                var p = re.compile("(.\\1.)");
                 
                 assert.deepEqual(
                     match.match(p, 'ab'),
@@ -109,7 +109,7 @@ function(re,
             
             ["Group Quantifier",
             function(){
-                var p = re.evaluate("(.)+");
+                var p = re.compile("(.)+");
                 
                 assert.deepEqual(
                     match.match(p, 'ab'),

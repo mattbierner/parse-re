@@ -7,7 +7,7 @@ function(re,
         'tests': [
             ["Simple",
             function(){
-                var p = re.evaluate("$");
+                var p = re.compile("$");
                 
                 assert.deepEqual(
                     match.match(p, ''),
@@ -19,7 +19,7 @@ function(re,
             }],
             ["Fail",
             function(){
-                var p = re.evaluate("a$");
+                var p = re.compile("a$");
                 
                 assert.deepEqual(
                     match.match(p, ''),
@@ -35,7 +35,7 @@ function(re,
             }],
             ["MultiLine",
             function(){
-                var p = re.evaluate("a$[^]a", re.RE_M);
+                var p = re.compile("a$[^]a", re.RE_M);
                 
                 assert.deepEqual(
                     match.match(p, 'a\na'),

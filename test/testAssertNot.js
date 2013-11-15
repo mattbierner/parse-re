@@ -7,7 +7,7 @@ function(re,
         'tests': [
             ["Simple",
             function(){
-                var p = re.evaluate("a(?!b).");
+                var p = re.compile("a(?!b).");
                 
                 assert.deepEqual(
                     match.exec(p, 'ab'),
@@ -20,7 +20,7 @@ function(re,
            
             ["Group is undef",
             function(){
-                var p = re.evaluate("a(?!(b)).");
+                var p = re.compile("a(?!(b)).");
                 
                 assert.deepEqual(
                     match.exec(p, 'ab'),

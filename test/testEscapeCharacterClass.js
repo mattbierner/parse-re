@@ -7,7 +7,7 @@ function(re,
         'tests': [
             ["Digit",
             function(){
-                var p = re.evaluate("\\d+");
+                var p = re.compile("\\d+");
                 
                 assert.deepEqual(
                     match.match(p, '0'),
@@ -23,7 +23,7 @@ function(re,
             }],
             ["Non Digit",
             function(){
-                var p = re.evaluate("\\D+");
+                var p = re.compile("\\D+");
                 
                 assert.deepEqual(
                     match.match(p, '0'),
@@ -40,7 +40,7 @@ function(re,
             
             ["Space",
             function(){
-                var p = re.evaluate("\\s+");
+                var p = re.compile("\\s+");
                 
                 assert.deepEqual(
                     match.match(p, ' '),
@@ -56,7 +56,7 @@ function(re,
             }],
             ["Space Matches line Terminator",
             function(){
-                var p = re.evaluate("\\s+");
+                var p = re.compile("\\s+");
                 
                 assert.deepEqual(
                     match.match(p, ' \n a'),
@@ -72,7 +72,7 @@ function(re,
             }],
             ["Non Space",
             function(){
-                var p = re.evaluate("\\S+");
+                var p = re.compile("\\S+");
                 
                 assert.deepEqual(
                     match.match(p, ' '),

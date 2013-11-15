@@ -7,7 +7,7 @@ function(re,
         'tests': [
             ["Atom",
             function(){
-                var p = re.evaluate("a\\na");
+                var p = re.compile("a\\na");
                 
                 assert.deepEqual(
                     match.match(p, 'a\na'),
@@ -15,7 +15,7 @@ function(re,
             }],
             ["Character Class",
             function(){
-                var p = re.evaluate("[a\\n]");
+                var p = re.compile("[a\\n]");
                 
                 assert.deepEqual(
                     match.match(p, 'a'),
@@ -27,7 +27,7 @@ function(re,
             }],
             ["Character Class Range",
             function(){
-                var p = re.evaluate("[\\n-\\r]");
+                var p = re.compile("[\\n-\\r]");
                 
                 assert.deepEqual(
                     match.match(p, '\n'),

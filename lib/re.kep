@@ -10,9 +10,9 @@ package (
     RE_G,
     RE_M,
     
-// Evaluation
-    evaluate,
-    evaluateStream)
+// compile
+    compileStream,
+    compile)
 with
     import 'amulet/record' record,
     import 'parse/parse' parse {
@@ -61,15 +61,16 @@ var copy = \arr{length} -> {
     return out;
 };
 
-var fromCharCodeParser =
-    join
-    \> \x -> parseInt(x, 16)
-    \> String.fromCharCode
-    \> always;
+var fromCharCodeP = \p ->
+    bind(p,
+        join
+        \> \x -> parseInt(x, 16)
+        \> String.fromCharCode
+        \> always);
 
 var notToken = \p -> 
     token((!) <\ (test, p));
-    
+
 /* Data
  ******************************************************************************/
 var Data = record.declare(null, [
@@ -180,16 +181,14 @@ var identifierPart = choice(
  */
 var hexEscapeSequence = next(
     character('x'),
-    bind(times(2, hexDigit),
-        fromCharCodeParser));
+    fromCharCodeP(times(2, hexDigit)));
 
 /**
  * Character specified as a 4 digit unicode point.
  */
 var unicodeEscapeSequence = next(
     character('u'),
-    bind(times(4, hexDigit),
-        fromCharCodeParser));
+    fromCharCodeP(times(4, hexDigit)));
 
 /**
  * Decimal Character.
@@ -551,10 +550,8 @@ RE_M = 1 << 2;
  * @param [flags] Flags that control the behavior of the resulting
  *     matcher.
  */
-evaluateStream = \input, flags -> let
-    patternFlags = (flags || RE_NONE),
-    
-    ok = \_, {'userState':{groups}} -> ({
+compileStream = \input, flags -> let
+    ok = \_, {'userState':{groups, flags}} -> ({
         'pattern': groups[0],
         'groups': groups,
         'flags': flags
@@ -565,7 +562,7 @@ in
     parse.parseStream(
         pattern,
         input,
-        Data.create(patternFlags, []),
+        Data.create((flags || RE_NONE), []),
         ok,
         err);
 
@@ -574,8 +571,8 @@ in
  * 
  * @param input Array like of characters input.
  */
-evaluate = \input, flags ->
-    evaluateStream(
+compile = \input, flags ->
+    compileStream(
         stream.from(input),
         flags);
 
