@@ -165,7 +165,7 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
             var __o = __o,
                 captures = __o["captures"],
                 groups = __o["groups"];
-            return (has(captures, i) ? text.string(captures[i]) : (parse.lookahead(groups[i]) || fail()));
+            return (has(captures, i) ? text.string(captures[i]) : next((groups[i] ? parse.lookahead(groups[i]) : fail()), empty));
         }));
     }));
     (character = text.character);

@@ -241,7 +241,9 @@ backReference = \i ->
   bind(getState, \{captures, groups} ->
      has(captures, i) ?
          text.string(captures[i]) :
-         (parse.lookahead <| groups[i]) || fail());
+         next(
+             (groups[i] ? parse.lookahead(groups[i]) : fail()),
+             empty));
 
 /* Character Matchers
  ******************************************************************************/
