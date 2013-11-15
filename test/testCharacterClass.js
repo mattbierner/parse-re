@@ -353,6 +353,48 @@ function(re,
                     match.exec(p, '\\'),
                     ['\\']);
             }],
+             ["Literal -",
+            function(){
+                var p = re.evaluate("[a\\-c]");
+                
+                assert.deepEqual(
+                    match.exec(p, 'a'),
+                    ['a']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'b'),
+                    null);
+                
+                assert.deepEqual(
+                    match.exec(p, 'c'),
+                    ['c']);
+                
+                assert.deepEqual(
+                    match.exec(p, '-'),
+                    ['-']);
+            }],
+            
+            ["Literal \\b is not word bounary",
+            function(){
+                var p = re.evaluate("[\\b]");
+                
+                assert.deepEqual(
+                    match.exec(p, '\u0008'),
+                    ['\u0008']);
+            }],
+            ["Escaped numbers are not backreferends but code points",
+            function(){
+                var p = re.evaluate("[\\1]");
+                
+                assert.deepEqual(
+                    match.exec(p, '\u0001'),
+                    ['\u0001']);
+                
+                assert.deepEqual(
+                    match.exec(p, '1'),
+                    null);
+            }],
+            
         ],
     };
 });

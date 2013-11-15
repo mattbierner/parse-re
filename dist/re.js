@@ -188,14 +188,11 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     }))));
     var characterClassEscape = choice(next(character("d"), always(match.digit)), next(character("D"), always(match.nonDigit)), next(character("s"), always(match.space)), next(character("S"), always(match.nonSpace)), next(character("w"), always(match.word)), next(character("W"), always(match.nonWord)));
     var characterEscape = choice(controlEscape, next(character("c"), controlLetter), hexEscapeSequence, unicodeEscapeSequence, identityEscape);
-    var classEscape = choice(decimalEscape, next(character("b"), always("\b")), characterClassEscape, characterEscape);
-    var classAtomNoDash = (function() {
-        {
-            var reserved = characters("-]");
-            return either(next(character("\\"), classEscape), notToken(reserved));
-        }
-    })();
-    var classAtom = either(character("-"), classAtomNoDash);
+    var classEscape = choice(bind(decimalEscape, (function(f, g) {
+        return (function(x) {
+            return f(g(x));
+        });
+    })(always, String.fromCharCode)), next(character("b"), always("\b")), characterClassEscape, characterEscape);
     var rangeFor = (function() {
         {
             var wrap = (function(c) {
@@ -206,6 +203,13 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
             });
         }
     })();
+    var classAtomNoDash = (function() {
+        {
+            var reserved = characters("-]");
+            return either(next(character("\\"), classEscape), notToken(reserved));
+        }
+    })();
+    var classAtom = either(character("-"), classAtomNoDash);
     var nonEmptyClassRangesNoDash = (function() {
         {
             var classRange = binds(enumeration(then(classAtomNoDash, character("-")), classAtom), rangeFor);

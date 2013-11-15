@@ -276,7 +276,9 @@ var characterEscape = choice(
  * Escaped character in a character class.
  */
 var classEscape = choice(
-    decimalEscape,
+    bind(
+        decimalEscape,
+        always <\ String.fromCharCode),
     next(
         character('b'),
         always('\u0008')),
@@ -285,19 +287,6 @@ var classEscape = choice(
 
 /* Character Classes
  ******************************************************************************/
-var classAtomNoDash = let 
-    reserved = characters('-]')
-in
-    either(
-        next(
-            character('\\'),
-            classEscape),
-        notToken(reserved));
-
-var classAtom = either(
-    character('-'),
-    classAtomNoDash);
-
 /**
  * Correctly handle false ranges where either `start` or `end` is a matcher
  * and not a single character.
@@ -312,6 +301,19 @@ in
                 match.character('-'),
                 wrap(end))) :
             matchCharacterRange(start, end));
+
+var classAtomNoDash = let 
+    reserved = characters('-]')
+in
+    either(
+        next(
+            character('\\'),
+            classEscape),
+        notToken(reserved));
+
+var classAtom = either(
+    character('-'),
+    classAtomNoDash);
 
 /**
  * 
@@ -390,7 +392,7 @@ var atomEscape = choice(
     bind(
         decimalEscape,
         always <\ match.backReference),
-        
+    
     matchCharacterFrom(characterEscape),
     
     characterClassEscape);
