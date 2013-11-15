@@ -156,6 +156,9 @@ var not = \m ->
 
 var previous = parse.extract(\x -> x.previous);
 
+var setCapture = \i, x ->
+    modifyState(\s -> Data.setCapture(s, i, x));
+
 /* Assertions
  ******************************************************************************/
 var test = \p, f ->
@@ -221,15 +224,11 @@ notWordBoundary = not <| wordBoundary;
  */
 group = \p, i ->
     next(
-        modifyState(\s -> Data.setCapture(s, i, '')),
+        setCapture(i, ''),
         bind(p, \x ->
             next(
-                modifyState(\s -> Data.setCapture(s, i, x)),
+                setCapture(i, x),
                 always(x))));
-
-var groupReference = \g, i ->
-    bind(getState, \{captures} ->
-        has(captures, i) ? empty : g);
 
 /**
  * Match a reference to group `i`.
@@ -242,7 +241,7 @@ backReference = \i ->
   bind(getState, \{captures, groups} ->
      has(captures, i) ?
          text.string(captures[i]) :
-         (groups[i] ? groupReference(groups[i], i) : fail()));
+         (parse.lookahead <| groups[i]) || fail());
 
 /* Character Matchers
  ******************************************************************************/
@@ -371,18 +370,40 @@ betweenNonGreedy = joinP <<\ \min, max, p ->
 
 /* Running
  ******************************************************************************/
+/**
+ * Run `pattern` against input once and return the result.
+ * 
+ * returns either the set of captures or null if none.
+ */
 matchStream = \pattern, input ->
     parse.parseState(
         pattern.pattern,
-        State.create(input, parse.Position.initial, new Data(pattern.groups, []), null),
+        State.create(
+            input,
+            parse.Position.initial,
+            Data.create(
+                pattern.groups,
+                []),
+            null),
         \_, s -> s.userState.captures,
         \ -> null);
-
+    
+/**
+ * @see matchStream
+ * 
+ * @param input Array like of characters.
+ */
 match = \pattern, input ->
     matchStream(
         pattern,
         stream.from(input));
-
+    
+/**
+ * Run `pattern` against input incrementally until a match is found.
+ * 
+ * @param pattern Pattern
+ * @param input Stream.
+ */
 execStream = \pattern, input -> {
     var result;
     var feed = input;
@@ -395,6 +416,11 @@ execStream = \pattern, input -> {
     return result;
 };
 
+/**
+ * @see execStream
+ * 
+ * @param input Array like of characters.
+ */
 exec = \pattern, input ->
     execStream(
         pattern,

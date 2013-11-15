@@ -10,11 +10,11 @@ function(re,
                 var p = re.evaluate("(a)");
                 
                 assert.deepEqual(
-                    match.exec(p, 'a'),
+                    match.match(p, 'a'),
                     ['a', 'a']);
                 
                 assert.deepEqual(
-                    match.exec(p, 'b'),
+                    match.match(p, 'b'),
                     null);
             }],
             ["Single group top level contains entire group",
@@ -22,11 +22,11 @@ function(re,
                 var p = re.evaluate("a(b)");
                 
                 assert.deepEqual(
-                    match.exec(p, 'ab'),
+                    match.match(p, 'ab'),
                     ['ab', 'b']);
                 
                 assert.deepEqual(
-                    match.exec(p, 'a'),
+                    match.match(p, 'a'),
                     null);
             }],
             
@@ -35,7 +35,7 @@ function(re,
                 var p = re.evaluate("(a)(b)(c)");
                 
                 assert.deepEqual(
-                    match.exec(p, 'abc'),
+                    match.match(p, 'abc'),
                     ['abc', 'a', 'b', 'c']);
             }],
             ["Nested Groups Ordering",
@@ -43,7 +43,7 @@ function(re,
                 var p = re.evaluate("(a(b(c))d)");
                 
                 assert.deepEqual(
-                    match.exec(p, 'abcd'),
+                    match.match(p, 'abcd'),
                     ['abcd', 'abcd', 'bc', 'c']);
             }],
             
@@ -52,7 +52,7 @@ function(re,
                 var p = re.evaluate("(a(?:b(c))d)");
                 
                 assert.deepEqual(
-                    match.exec(p, 'abcd'),
+                    match.match(p, 'abcd'),
                     ['abcd', 'abcd', 'c']);
             }],
             
@@ -61,11 +61,11 @@ function(re,
                 var p = re.evaluate("(.)\\1");
                 
                 assert.deepEqual(
-                    match.exec(p, 'aa'),
+                    match.match(p, 'aa'),
                     ['aa', 'a']);
                 
                 assert.deepEqual(
-                    match.exec(p, 'ab'),
+                    match.match(p, 'ab'),
                     null);
             }],
              
@@ -74,11 +74,11 @@ function(re,
                 var p = re.evaluate("(.)\\2");
                 
                 assert.deepEqual(
-                    match.exec(p, 'aa'),
+                    match.match(p, 'aa'),
                     null);
                 
                 assert.deepEqual(
-                    match.exec(p, 'ab'),
+                    match.match(p, 'ab'),
                     null);
             }],
             ["Forward Back Reference",
@@ -86,7 +86,7 @@ function(re,
                 var p = re.evaluate("(.)\\2(.)");
                 
                 assert.deepEqual(
-                    match.exec(p, 'abb'),
+                    match.match(p, 'abb'),
                     ['ab', 'a', 'b']);
                 
             }],
@@ -95,8 +95,16 @@ function(re,
                 var p = re.evaluate("(.)\\2(.)(.)");
                 
                 assert.deepEqual(
-                    match.exec(p, 'abc'),
+                    match.match(p, 'abc'),
                     ['abc', 'a', 'b', 'c']);
+            }],
+             ["Forward Back Reference makes self empty",
+            function(){
+                var p = re.evaluate("(.)(\\2)(.)");
+                
+                assert.deepEqual(
+                    match.match(p, 'abc'),
+                    ['ab', 'a', '', 'b']);
                 
             }],
             ["Back Reference to self is nop",
@@ -104,7 +112,7 @@ function(re,
                 var p = re.evaluate("(.\\1.)");
                 
                 assert.deepEqual(
-                    match.exec(p, 'ab'),
+                    match.match(p, 'ab'),
                     ['ab', 'ab']);
             }],
             
@@ -113,7 +121,7 @@ function(re,
                 var p = re.evaluate("(.)+");
                 
                 assert.deepEqual(
-                    match.exec(p, 'ab'),
+                    match.match(p, 'ab'),
                     ['ab', 'b']);
             }],
         ],

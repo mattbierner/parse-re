@@ -125,6 +125,11 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     var previous = parse.extract((function(x) {
         return x.previous;
     }));
+    var setCapture = (function(i, x) {
+        return modifyState((function(s) {
+            return Data.setCapture(s, i, x);
+        }));
+    });
     var test = (function(p, f) {
         return bind(p, (function(x) {
             return (f(x) ? empty : fail());
@@ -151,27 +156,16 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     })))));
     (notWordBoundary = not(wordBoundary));
     (group = (function(p, i) {
-        return next(modifyState((function(s) {
-            return Data.setCapture(s, i, "");
-        })), bind(p, (function(x) {
-            return next(modifyState((function(s) {
-                return Data.setCapture(s, i, x);
-            })), always(x));
+        return next(setCapture(i, ""), bind(p, (function(x) {
+            return next(setCapture(i, x), always(x));
         })));
     }));
-    var groupReference = (function(g, i) {
-        return bind(getState, (function(__o) {
-            var __o = __o,
-                captures = __o["captures"];
-            return (has(captures, i) ? empty : g);
-        }));
-    });
     (backReference = (function(i) {
         return bind(getState, (function(__o) {
             var __o = __o,
                 captures = __o["captures"],
                 groups = __o["groups"];
-            return (has(captures, i) ? text.string(captures[i]) : (groups[i] ? groupReference(groups[i], i) : fail()));
+            return (has(captures, i) ? text.string(captures[i]) : (parse.lookahead(groups[i]) || fail()));
         }));
     }));
     (character = text.character);
@@ -260,7 +254,7 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
         return parse.append(lang.times(min, p), atMost((max - min), p));
     })));
     (matchStream = (function(pattern, input) {
-        return parse.parseState(pattern.pattern, State.create(input, parse.Position.initial, new(Data)(pattern.groups, []), null), (function(_, s) {
+        return parse.parseState(pattern.pattern, State.create(input, parse.Position.initial, Data.create(pattern.groups, []), null), (function(_, s) {
             return s.userState.captures;
         }), (function() {
             return null;
