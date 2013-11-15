@@ -32,6 +32,15 @@ function(re,
                 assert.deepEqual(
                     match.match(p, 'baaac'),
                     ['b', 'aaa']);
+            }],
+            
+            ["No backtrack",
+            function(){
+                var p = re.evaluate("(?=(a+))a*b\\1");
+                
+                assert.deepEqual(
+                    match.exec(p, 'baaabac'),
+                    ['aba', 'a']);
             }]
         ],
     };

@@ -274,12 +274,12 @@ in
             enumeration(
                 classRange,
                 classRanges),
-            always <\ match.choice),
+            always <\ match.anys),
         attempt <| bind(
             enumeration(
                 classChar(classAtomNoDash),
                 nonEmptyClassRangesNoDash),
-            always <\ match.choice),
+            always <\ match.anys),
         classChar(classAtom)));
 
 /**
@@ -299,12 +299,12 @@ in
             enumeration(
                 classRange,
                 classRanges),
-            always <\ match.choice),
+            always <\ match.anys),
         attempt <| bind(
             enumeration(
                 classChar(classAtom),
                 nonEmptyClassRangesNoDash),
-            always <\ match.choice),
+            always <\ match.anys),
         classChar(classAtom));
 
 /**
@@ -441,7 +441,7 @@ var assertion = choice(
 /**
  * 
  */
-var term = choice(
+var term = either(
     attempt <| assertion,
     binds(
         enumeration(
@@ -455,7 +455,7 @@ var term = choice(
  */
 var alternative = bind(
     many(term),
-    always <\ match.sequence);
+    always <\ match.chains);
 
 /**
  * 
@@ -463,7 +463,7 @@ var alternative = bind(
 disjunction = bind(
     sepBy(character('|'),
         alternative),
-    always <\ match.choice);
+    always <\ match.anys);
 
 /**
  * 

@@ -203,11 +203,11 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
                     return (function(x) {
                         return f(g(x));
                     });
-                })(always, match.choice))), attempt(bind(enumeration(classChar(classAtomNoDash), nonEmptyClassRangesNoDash), (function(f, g) {
+                })(always, match.anys))), attempt(bind(enumeration(classChar(classAtomNoDash), nonEmptyClassRangesNoDash), (function(f, g) {
                     return (function(x) {
                         return f(g(x));
                     });
-                })(always, match.choice))), classChar(classAtom));
+                })(always, match.anys))), classChar(classAtom));
             }
         })();
     }));
@@ -218,11 +218,11 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
                 return (function(x) {
                     return f(g(x));
                 });
-            })(always, match.choice))), attempt(bind(enumeration(classChar(classAtom), nonEmptyClassRangesNoDash), (function(f, g) {
+            })(always, match.anys))), attempt(bind(enumeration(classChar(classAtom), nonEmptyClassRangesNoDash), (function(f, g) {
                 return (function(x) {
                     return f(g(x));
                 });
-            })(always, match.choice))), classChar(classAtom));
+            })(always, match.anys))), classChar(classAtom));
         }
     })();
     (classRanges = optional(fail(), nonEmptyClassRanges));
@@ -268,19 +268,19 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
             });
         })(always, x));
     }))));
-    var term = choice(attempt(assertion), binds(enumeration(atom, optional(identity, quantifier)), (function(atom, quantifier) {
+    var term = either(attempt(assertion), binds(enumeration(atom, optional(identity, quantifier)), (function(atom, quantifier) {
         return always(quantifier(atom));
     })));
     var alternative = bind(many(term), (function(f, g) {
         return (function(x) {
             return f(g(x));
         });
-    })(always, match.sequence));
+    })(always, match.chains));
     (disjunction = bind(sepBy(character("|"), alternative), (function(f, g) {
         return (function(x) {
             return f(g(x));
         });
-    })(always, match.choice)));
+    })(always, match.anys)));
     (pattern = group(disjunction));
     (RE_NONE = 0);
     (RE_I = (1 << 0));

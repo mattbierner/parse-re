@@ -27,11 +27,11 @@ package (
     eof,
     eol,
 
-//
-    choice,
-    choicea,
-    sequence,
+// 
+    anys,
+    chains,
     
+// Quantifiers
     between,
     betweenNonGreedy,
     atMost,
@@ -67,8 +67,12 @@ with
     import 'parse/lang' lang {sepBy, sepEndBy, then},
     import 'parse/text' text {characters, string},
     import 'nu/stream' stream {first, rest, isEmpty, foldl, map, toArray},
-    import 'nu/gen' gen
+    import 'nu/gen' {range}
 in {
+
+var toLowerCase =  Function.prototype.call.bind(String.prototype.toLowerCase);
+var toUpperCase =  Function.prototype.call.bind(String.prototype.toUpperCase);
+var indexOf = Function.prototype.call.bind(Array.prototype.indexOf);
 
 var args = \args(...) -> args;
 
@@ -81,12 +85,9 @@ var copy = \arr{length} -> {
     return out;
 };
 
-var contains = \a, x -> Array.prototype.indexOf.call(a, x) !== -1;
+var contains = indexOf \>> (!==, -1);
 
 var has = \o, i -> o[i] !== undefined;
-
-var toLowerCase =  Function.prototype.call.bind(String.prototype.toLowerCase);
-var toUpperCase =  Function.prototype.call.bind(String.prototype.toUpperCase);
 
 var fromCharCode = \x -> String.fromCharCode(x);
 
@@ -127,6 +128,9 @@ State.prototype.next = \x -> {
 
 /* Data
  ******************************************************************************/
+/**
+ * User data threaded though parsers.
+ */
 var Data = record.declare(null, [
     'groups',
     'captures']);
@@ -137,19 +141,16 @@ Data.setCapture = \s{captures}, i, x -> {
     return Data.setCaptures(s, c);
 };
 
-/* Base
+/* Base Parsers
  ******************************************************************************/
 var empty = always('');
 
-var fromCharCodeParser =
-    join
+var fromCharCodeParser = join
     \> \x -> parseInt(x, 16)
-    \> fromCharCode
+    \> String.fromCharCode
     \> always;
-    
+
 var joinP = \p -> bind(p, always <\ join);
-
-
 
 var previous = parse.extract(\x -> x.previous);
 
@@ -262,14 +263,12 @@ characteri = \c ->
 /**
  * Match a character in a range.
  */
-characterRange = let
-    range = \start, end ->
-        gen.range(start.charCodeAt(0), end.charCodeAt(0) + 1, 1)
-in
-    range
-        \>> (map, fromCharCode)
-        \>> join
-        \>> text.characters;
+characterRange =
+    \start, end ->
+        range(start.charCodeAt(0), end.charCodeAt(0) + 1, 1)
+    \>> (map, fromCharCode)
+    \>> join
+    \>> text.characters;
 
 /**
  * Match a character in a range case insensitively.
@@ -326,18 +325,9 @@ nonWord = notToken <| word;
  * 
  * @param s Stream of patterns.
  */
-choice = (map, attempt)
-    \> toArray
-    \> parse.choicea;
+anys = (map, attempt) \> parse.choices;
 
-/**
- * 
- */
-choicea = args \>> parse.choicea;
-
-sequence = toArray
-    \> parse.enumerationa
-    \> joinP;
+chains = parse.enumerations \> joinP;
 
 /* Quantifiers
  ******************************************************************************/

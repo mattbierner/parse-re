@@ -5,6 +5,14 @@ function(re,
     return {
         'module': "Atom",
         'tests': [
+              ["Noop",
+            function(){
+                var p = re.evaluate("");
+                
+                var r = match.exec(p, '');
+                assert.deepEqual(r, ['']);
+            }],
+
             ["Simple Atom",
             function(){
                 var p = re.evaluate("a");

@@ -2,9 +2,9 @@
  * THIS FILE IS AUTO GENERATED from 'lib/match.kep'
  * DO NOT EDIT
 */
-define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "parse/text", "nu/stream", "nu/gen"], (function(require, exports, record, parse, lang, text, stream, gen) {
+define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "parse/text", "nu/stream", "nu/gen"], (function(require, exports, record, parse, lang, text, stream, __o) {
     "use strict";
-    var character, characteri, characterRange, characterRangei, anyCharacter, digit, nonDigit, space, nonSpace, word, nonWord, assert, assertNot, wordBoundary, notWordBoundary, bof, bol, eof, eol, choice, choicea, sequence, between, betweenNonGreedy, atMost, group, backReference, matchStream, match, execStream, exec;
+    var character, characteri, characterRange, characterRangei, anyCharacter, digit, nonDigit, space, nonSpace, word, nonWord, assert, assertNot, wordBoundary, notWordBoundary, bof, bol, eof, eol, anys, chains, between, betweenNonGreedy, atMost, group, backReference, matchStream, match, execStream, exec;
     var record = record,
         parse = parse,
         always = parse["always"],
@@ -36,7 +36,11 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
         foldl = stream["foldl"],
         map = stream["map"],
         toArray = stream["toArray"],
-        gen = gen;
+        __o = __o,
+        range = __o["range"];
+    var toLowerCase = Function.prototype.call.bind(String.prototype.toLowerCase);
+    var toUpperCase = Function.prototype.call.bind(String.prototype.toUpperCase);
+    var indexOf = Function.prototype.call.bind(Array.prototype.indexOf);
     var args = (function() {
         var args = arguments;
         return args;
@@ -54,14 +58,16 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
 
         return out;
     });
-    var contains = (function(a, x) {
-        return (Array.prototype.indexOf.call(a, x) !== -1);
-    });
+    var contains = (function(f, g) {
+        return (function() {
+            return f(g.apply(null, arguments));
+        });
+    })((function(x, y) {
+        return (x !== y);
+    }).bind(null, -1), indexOf);
     var has = (function(o, i) {
         return (o[i] !== undefined);
     });
-    var toLowerCase = Function.prototype.call.bind(String.prototype.toLowerCase);
-    var toUpperCase = Function.prototype.call.bind(String.prototype.toUpperCase);
     var fromCharCode = (function(x) {
         return String.fromCharCode(x);
     });
@@ -105,7 +111,7 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
         return (function(x) {
             return f(g(x));
         });
-    })(fromCharCode, (function(f, g) {
+    })(String.fromCharCode, (function(f, g) {
         return (function(x) {
             return f(g(x));
         });
@@ -161,10 +167,10 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
         })));
     }));
     (backReference = (function(i) {
-        return bind(getState, (function(__o) {
-            var __o = __o,
-                captures = __o["captures"],
-                groups = __o["groups"];
+        return bind(getState, (function(__o0) {
+            var __o0 = __o0,
+                captures = __o0["captures"],
+                groups = __o0["groups"];
             return (has(captures, i) ? text.string(captures[i]) : (has(groups, i) ? empty : fail()));
         }));
     }));
@@ -172,26 +178,21 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     (characteri = (function(c) {
         return either(character(toLowerCase(c)), character(toUpperCase(c)));
     }));
-    (characterRange = (function() {
-        {
-            var range = (function(start, end) {
-                return gen.range(start.charCodeAt(0), (end.charCodeAt(0) + 1), 1);
-            });
-            return (function(f, g) {
-                return (function() {
-                    return f(g.apply(null, arguments));
-                });
-            })(text.characters, (function(f, g) {
-                return (function() {
-                    return f(g.apply(null, arguments));
-                });
-            })(join, (function(f, g) {
-                return (function() {
-                    return f(g.apply(null, arguments));
-                });
-            })(map.bind(null, fromCharCode), range)));
-        }
-    })());
+    (characterRange = (function(f, g) {
+        return (function() {
+            return f(g.apply(null, arguments));
+        });
+    })(text.characters, (function(f, g) {
+        return (function() {
+            return f(g.apply(null, arguments));
+        });
+    })(join, (function(f, g) {
+        return (function() {
+            return f(g.apply(null, arguments));
+        });
+    })(map.bind(null, fromCharCode), (function(start, end) {
+        return range(start.charCodeAt(0), (end.charCodeAt(0) + 1), 1);
+    })))));
     (characterRangei = (function(b, c) {
         return either(characterRange(toLowerCase(b), toLowerCase(c)), characterRange(toUpperCase(b), toUpperCase(c)));
     }));
@@ -217,29 +218,16 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     (nonSpace = notToken(space));
     (word = text.characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"));
     (nonWord = notToken(word));
-    (choice = (function(f, g) {
+    (anys = (function(f, g) {
         return (function(x) {
             return f(g(x));
         });
-    })(parse.choicea, (function(f, g) {
+    })(parse.choices, map.bind(null, attempt)));
+    (chains = (function(f, g) {
         return (function(x) {
             return f(g(x));
         });
-    })(toArray, map.bind(null, attempt))));
-    (choicea = (function(f, g) {
-        return (function() {
-            return f(g.apply(null, arguments));
-        });
-    })(parse.choicea, args));
-    (sequence = (function(f, g) {
-        return (function(x) {
-            return f(g(x));
-        });
-    })(joinP, (function(f, g) {
-        return (function(x) {
-            return f(g(x));
-        });
-    })(parse.enumerationa, toArray)));
+    })(joinP, parse.enumerations));
     (atMost = (function(max, p) {
         return ((max === 0) ? always(stream.end) : (function(state, m, cok, cerr, eok, eerr) {
             return (function() {
@@ -262,10 +250,10 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     })(joinP, (function(min, max, p) {
         return parse.append(lang.times(min, p), atMost((max - min), p));
     })));
-    (matchStream = (function(__o, input) {
-        var __o = __o,
-            pattern = __o["pattern"],
-            groups = __o["groups"];
+    (matchStream = (function(__o0, input) {
+        var __o0 = __o0,
+            pattern = __o0["pattern"],
+            groups = __o0["groups"];
         return parse.parseState(pattern, State.create(input, parse.Position.initial, Data.create(groups, new(Array)(groups.length)), null), (function(_, s) {
             return s.userState.captures;
         }), (function() {
@@ -309,9 +297,8 @@ define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "par
     (exports.bol = bol);
     (exports.eof = eof);
     (exports.eol = eol);
-    (exports.choice = choice);
-    (exports.choicea = choicea);
-    (exports.sequence = sequence);
+    (exports.anys = anys);
+    (exports.chains = chains);
     (exports.between = between);
     (exports.betweenNonGreedy = betweenNonGreedy);
     (exports.atMost = atMost);
