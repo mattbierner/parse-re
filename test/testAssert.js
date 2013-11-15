@@ -27,11 +27,11 @@ function(re,
             }],
             ["With Group",
             function(){
-                var p = re.evaluate("(?=(a+))");
+                var p = re.evaluate("b(?=(a+))");
                 
                 assert.deepEqual(
-                    match.exec(p, 'baaabac'),
-                    ['', 'aaa']);
+                    match.match(p, 'baaac'),
+                    ['b', 'aaa']);
             }]
         ],
     };

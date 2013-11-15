@@ -81,16 +81,7 @@ function(re,
                     match.match(p, 'ab'),
                     null);
             }],
-            ["Forward Back Reference",
-            function(){
-                var p = re.evaluate("(.)\\2(.)");
-                
-                assert.deepEqual(
-                    match.match(p, 'abb'),
-                    ['ab', 'a', 'b']);
-                
-            }],
-            ["Forward Back Reference Does not double consume",
+            ["Forward Back Reference is empty",
             function(){
                 var p = re.evaluate("(.)\\2(.)(.)");
                 

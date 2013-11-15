@@ -83,7 +83,7 @@ var copy = \arr{length} -> {
 
 var contains = \a, x -> Array.prototype.indexOf.call(a, x) !== -1;
 
-var has = \o, i -> Object.hasOwnProperty.call(o, i);
+var has = \o, i -> o[i] !== undefined;
 
 var toLowerCase =  Function.prototype.call.bind(String.prototype.toLowerCase);
 var toUpperCase =  Function.prototype.call.bind(String.prototype.toUpperCase);
@@ -149,10 +149,7 @@ var fromCharCodeParser =
     
 var joinP = \p -> bind(p, always <\ join);
 
-var not = \m -> 
-    either(
-        next(attempt <| m, fail()),
-        always());
+
 
 var previous = parse.extract(\x -> x.previous);
 
@@ -163,6 +160,11 @@ var setCapture = \i, x ->
  ******************************************************************************/
 var test = \p, f ->
     bind(p, \x -> f(x) ? empty : fail());
+
+var not = \m -> 
+    either(
+        next(m, fail()),
+        always());
 
 /**
  * Check the input matches a parser without consuming any input.
@@ -234,16 +236,13 @@ group = \p, i ->
  * Match a reference to group `i`.
  * 
  * If the group has already been consumed, matches the text of that capture.
- * Otherwise, matches using the referenced group but does not advance the input
- * and returns an empty string. Non existent groups always fail.
+ * Otherwise, do nothing. Non existent groups always fail.
  */
 backReference = \i ->
-  bind(getState, \{captures, groups} ->
-     has(captures, i) ?
-         text.string(captures[i]) :
-         next(
-             (groups[i] ? parse.lookahead(groups[i]) : fail()),
-             empty));
+    bind(getState, \{captures, groups} ->
+        has(captures, i) ?
+            text.string(captures[i]) :
+            (has(groups, i) ? empty : fail()));
 
 /* Character Matchers
  ******************************************************************************/
@@ -287,15 +286,18 @@ anyCharacter = token((!) <\ isLineTerminator);
 
 /* Character Class Matchers
  ******************************************************************************/
+var notToken = \p ->
+    token((!) <\ (parse.test, p));
+
 /**
  * Match any digit character.
  */
 digit = characterRange('0', '9');
 
 /**
- * Match any character except a digit.
+ * Match any non digit character.
  */
-nonDigit = not <| digit;
+nonDigit = notToken <| digit;
 
 /**
  * Match any space character
@@ -303,9 +305,9 @@ nonDigit = not <| digit;
 space = text.characters("\u0009\u000b\u000c\u0020\u00a0\ufeff\u000a\u000d\u2028\u2029");
 
 /**
- * Match any character except a space.
+ * Match any non space character.
  */
-nonSpace = not <| space;
+nonSpace = notToken <| space;
 
 /**
  * Match any word character.
@@ -315,7 +317,7 @@ word = text.characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123
 /**
  * Match any non word character.
  */
-nonWord = not <| word;
+nonWord = notToken <| word;
 
 /* Parsers
  ******************************************************************************/
@@ -377,19 +379,17 @@ betweenNonGreedy = joinP <<\ \min, max, p ->
  * 
  * returns either the set of captures or null if none.
  */
-matchStream = \pattern, input ->
+matchStream = \{pattern, groups}, input ->
     parse.parseState(
-        pattern.pattern,
+        pattern,
         State.create(
             input,
             parse.Position.initial,
-            Data.create(
-                pattern.groups,
-                []),
+            Data.create(groups, new Array(groups.length)),
             null),
         \_, s -> s.userState.captures,
         \ -> null);
-    
+
 /**
  * @see matchStream
  * 
@@ -399,7 +399,7 @@ match = \pattern, input ->
     matchStream(
         pattern,
         stream.from(input));
-    
+
 /**
  * Run `pattern` against input incrementally until a match is found.
  * 

@@ -44,7 +44,19 @@ function(re,
                 assert.deepEqual(
                     match.exec(p, 'abc'),
                     ['abc']);
-            }]
+            }],
+            ["Disjunction subgroups all counted",
+            function(){
+                var p = re.evaluate("(a(b))|(b)");
+
+                assert.deepEqual(
+                    match.exec(p, 'ab'),
+                    ['ab', 'ab', 'b', undefined]);
+                
+                assert.deepEqual(
+                    match.exec(p, 'b'),
+                    ['b', undefined, undefined, 'b']);
+            }],
         ],
     };
 });

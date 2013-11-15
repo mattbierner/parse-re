@@ -3,28 +3,33 @@ define(['parse_re/re',
 function(re,
         match){
     return {
-        'module': "Assert",
+        'module': "Assert Not",
         'tests': [
             ["Simple",
             function(){
-                var p = re.evaluate("a(?=b)");
+                var p = re.evaluate("a(?!b).");
                 
                 assert.deepEqual(
                     match.exec(p, 'ab'),
-                    ['a']);
-                
-                assert.deepEqual(
-                    match.exec(p, 'ax'),
                     null);
-            }],
-            ["Consumes Nothing",
-            function(){
-                var p = re.evaluate("a(?=b)b+");
                 
                 assert.deepEqual(
-                    match.exec(p, 'abb'),
-                    ['abb']);
-            }]
+                    match.exec(p, 'ac'),
+                    ['ac']);
+            }],
+           
+            ["Group is undef",
+            function(){
+                var p = re.evaluate("a(?!(b)).");
+                
+                assert.deepEqual(
+                    match.exec(p, 'ab'),
+                    null);
+                
+                assert.deepEqual(
+                    match.exec(p, 'ac'),
+                    ['ac', undefined]);
+            }],
         ],
     };
 });
