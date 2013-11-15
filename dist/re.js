@@ -2,10 +2,11 @@
  * THIS FILE IS AUTO GENERATED from 'lib/re.kep'
  * DO NOT EDIT
 */
-define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/stream", "nu/gen", "parse_re/match"], (function(require, exports, parse, __o, __o0, __o1, gen, match) {
+define(["require", "exports", "amulet/record", "parse/parse", "parse/lang", "parse/text", "nu/stream", "nu/gen", "parse_re/match"], (function(require, exports, record, parse, __o, text, __o0, gen, match) {
     "use strict";
     var pattern, RE_NONE, RE_I, RE_G, RE_M, evaluate;
-    var parse = parse,
+    var record = record,
+        parse = parse,
         always = parse["always"],
         attempt = parse["attempt"],
         bind = parse["bind"],
@@ -30,16 +31,24 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         sepEndBy = __o["sepEndBy"],
         times = __o["times"],
         then = __o["then"],
+        text = text,
+        character = text["character"],
+        characters = text["characters"],
+        string = text["string"],
         __o0 = __o0,
-        character = __o0["character"],
-        characters = __o0["characters"],
-        string = __o0["string"],
-        __o1 = __o1,
-        foldl = __o1["foldl"],
-        map = __o1["map"],
-        toArray = __o1["toArray"],
+        foldl = __o0["foldl"],
+        map = __o0["map"],
+        toArray = __o0["toArray"],
         gen = gen,
         match = match;
+    var disjunction = (function() {
+        var args = arguments;
+        return disjunction.apply(null, args);
+    });
+    var classRanges = (function() {
+        var args = arguments;
+        return classRanges.apply(null, args);
+    });
     var identity = (function(x) {
         return x;
     });
@@ -51,6 +60,16 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     var join = foldl.bind(null, (function(x, y) {
         return (x + y);
     }), "");
+    var copy = (function(arr) {
+        var arr = arr,
+            length = arr["length"];
+        var out = [];
+        for (var i = 0;
+            (i < length);
+            (i = (i + 1)))(out[i] = arr[i]);
+
+        return out;
+    });
     var fromCharCodeParser = (function(f, g) {
         return (function(x) {
             return f(g(x));
@@ -66,24 +85,7 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     })((function(x) {
         return parseInt(x, 16);
     }), join)));
-    var disjunction = (function() {
-        var args = arguments;
-        return disjunction.apply(null, args);
-    });
-    var classRanges = (function() {
-        var args = arguments;
-        return classRanges.apply(null, args);
-    });
-    var copy = (function(arr) {
-        var arr = arr,
-            length = arr["length"];
-        var out = [];
-        for (var i = 0;
-            (i < length);
-            (i = (i + 1)))(out[i] = arr[i]);
-
-        return out;
-    });
+    var Data = record.declare(null, ["flags", "groups"]);
     var addGroup = (function(a, g) {
         var c = copy(a);
         c.push(g);
@@ -94,15 +96,11 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         (c[i] = g);
         return c;
     });
-    var Data = (function(flags, groups) {
-        (this.flags = flags);
-        (this.groups = groups);
-    });
     (Data.addGroup = (function(s, g) {
-        return new(Data)(s.flags, addGroup(s.groups, g));
+        return s.setGroups(addGroup(s.groups, g));
     }));
     (Data.setGroup = (function(s, i, g) {
-        return new(Data)(s.flags, setGroup(s.groups, i, g));
+        return s.setGroups(setGroup(s.groups, i, g));
     }));
     var decimalDigit = characters("0123456789");
     var decimalDigits = bind(many1(decimalDigit), (function(x) {
@@ -125,6 +123,11 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
             }));
         }));
     });
+    var matchCharacterRange = (function(from, to) {
+        return bind(getState, (function(s) {
+            return always(((s.flags & RE_I) ? match.characterRangei(from, to) : match.characterRange(from, to)));
+        }));
+    });
     var matchBof = bind(getState, (function(s) {
         return always(((s.flags & RE_M) ? match.bol : match.bof));
     }));
@@ -132,13 +135,13 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
         return always(((s.flags & RE_M) ? match.eol : match.eof));
     }));
     var group = (function(p) {
-        return bind(parse.getState, (function(s) {
+        return next(parse.modifyState((function(s) {
+            return Data.addGroup(s, null);
+        })), bind(parse.getState, (function(s) {
             return (function() {
                 {
-                    var i = s.groups.length;
-                    return next(parse.modifyState((function(s) {
-                        return Data.addGroup(s, null);
-                    })), bind(p, (function(p) {
+                    var i = (s.groups.length - 1);
+                    return bind(p, (function(p) {
                         return (function() {
                             {
                                 var impl = match.group(p, i);
@@ -147,23 +150,30 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
                                 })), always(impl));
                             }
                         })();
-                    })));
+                    }));
                 }
             })();
-        }));
+        })));
     });
     var hexDigit = characters("0123456789abcdefABCDEF");
     var hexEscapeSequence = next(character("x"), bind(times(2, hexDigit), fromCharCodeParser));
     var unicodeEscapeSequence = next(character("u"), bind(times(4, hexDigit), fromCharCodeParser));
     var decimalEscape = decimalIntegerLiteral;
-    var characterClassEscape = choice(next(character("d"), always(match.digit)), next(character("D"), always(match.notDigit)), next(character("s"), always(match.space)), next(character("S"), always(match.notSpace)), next(character("d"), always(match.word)), next(character("D"), always(match.notWord)));
-    var identityEscape = parse.anyToken;
+    var characterClassEscape = choice(next(character("d"), always(match.digit)), next(character("D"), always(match.nonDigit)), next(character("s"), always(match.space)), next(character("S"), always(match.nonSpace)), next(character("d"), always(match.word)), next(character("D"), always(match.nonWord)));
+    var identifierPart = choice(text.character, characters("$_"), text.digit);
+    var identityEscape = either(characters("‌‍"), token((function(f, g) {
+        return (function(x) {
+            return f(g(x));
+        });
+    })((function(x) {
+        return !x;
+    }), test.bind(null, identifierPart))));
     var controlLetter = bind(characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"), (function(x) {
         return (function() {
             {
                 var i = x.charCodeAt(0),
                     j = (i % 32);
-                return always(character(String.fromCharCode(j)));
+                return always(reChar(String.fromCharCode(j)));
             }
         })();
     }));
@@ -177,7 +187,7 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     })();
     var characterEscape = choice(controlEscape, next(character("c"), controlLetter), hexEscapeSequence, unicodeEscapeSequence, identityEscape);
     var classEscape = choice(decimalEscape, character("b"), characterEscape, characterClassEscape);
-    var classAtomNoDash = choice(token((function(f, g) {
+    var classAtomNoDash = either(token((function(f, g) {
         return (function(x) {
             return f(g(x));
         });
@@ -188,11 +198,7 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     var nonEmptyClassRangesNoDash = rec((function(nonEmptyClassRangesNoDash) {
         return (function() {
             {
-                var classRange = binds(enumeration(then(classAtomNoDash, character("-")), classAtom), (function(f, g) {
-                    return (function() {
-                        return f(g.apply(null, arguments));
-                    });
-                })(always, match.characterRange));
+                var classRange = binds(enumeration(then(classAtomNoDash, character("-")), classAtom), matchCharacterRange);
                 return choice(attempt(bind(enumeration(classRange, classRanges), (function(f, g) {
                     return (function(x) {
                         return f(g(x));
@@ -207,11 +213,7 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     }));
     var nonEmptyClassRanges = (function() {
         {
-            var classRange = binds(enumeration(then(classAtom, character("-")), classAtom), (function(f, g) {
-                return (function() {
-                    return f(g.apply(null, arguments));
-                });
-            })(always, match.characterRange));
+            var classRange = binds(enumeration(then(classAtom, character("-")), classAtom), matchCharacterRange);
             return choice(attempt(bind(enumeration(classRange, classRanges), (function(f, g) {
                 return (function(x) {
                     return f(g(x));
@@ -238,27 +240,18 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
             return f(g(x));
         });
     })(always, match.backReference)), classChar(characterEscape), characterClassEscape);
-    var patternCharacter = token((function(tok) {
-        switch (tok) {
-            case "^":
-            case "$":
-            case "\\":
-            case ".":
-            case "*":
-            case "+":
-            case "?":
-            case "(":
-            case ")":
-            case "[":
-            case "]":
-            case "{":
-            case "}":
-            case "|":
-                return false;
-            default:
-                return true;
+    var patternCharacter = (function() {
+        {
+            var reserved = "^$\\.*+?()[]{}|";
+            return token((function(f, g) {
+                return (function(x) {
+                    return f(g(x));
+                });
+            })((function(x) {
+                return !x;
+            }), test.bind(null, characters(reserved))));
         }
-    }));
+    })();
     var atom = choice(classChar(patternCharacter), next(character("."), always(match.anyCharacter)), next(character("\\"), atomEscape), characterClass, between(character("("), character(")"), either(next(string("?:"), disjunction), group(disjunction))));
     var quantifierPrefix = choice(next(character("*"), always([0, Infinity])), next(character("+"), always([1, Infinity])), next(character("?"), always([0, 1])), between(character("{"), character("}"), binds(enumeration(decimalDigits, optional(null, character(",")), optional(Infinity, decimalDigits)), (function(lower, hasUpper, upper) {
         return always((hasUpper ? [lower, upper] : [lower, lower]));
@@ -294,10 +287,13 @@ define(["require", "exports", "parse/parse", "parse/lang", "parse/text", "nu/str
     (RE_G = (1 << 1));
     (RE_M = (1 << 2));
     (evaluate = (function(input, flags) {
-        return parse.parse(pattern, input, new(Data)((flags || RE_NONE), []), (function(x, s) {
+        return parse.parse(pattern, input, new(Data)((flags || RE_NONE), []), (function(_, __o1) {
+            var __o1 = __o1,
+                __o2 = __o1["userState"],
+                groups = __o2["groups"];
             return ({
-                "pattern": x,
-                "groups": s.userState.groups
+                "pattern": groups[0],
+                "groups": groups
             });
         }), (function(x) {
             throw x;

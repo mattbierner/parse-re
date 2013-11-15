@@ -2,8 +2,6 @@
  * 
  */
 package (
-    not,
-        
 // Characters
     character,
     characteri,
@@ -13,11 +11,11 @@ package (
     
 // Character Classes
     digit,
-    notDigit,
+    nonDigit,
     space,
-    notSpace,
+    nonSpace,
     word,
-    notWord,
+    nonWord,
     
 // Assertions
     assert,
@@ -34,19 +32,22 @@ package (
     choicea,
     sequence,
     
-    times,
     between,
     betweenNonGreedy,
     atMost,
-    atLeast,
     
 // Group
     group,
     backReference,
     
 // Running
+    matchStream,
+    match,
+    
+    execStream,
     exec)
 with
+    import 'amulet/record' record,
     import 'parse/parse' parse {
         always,
         attempt,
@@ -64,8 +65,8 @@ with
         next,
         token},
     import 'parse/lang' lang {sepBy, sepEndBy, then},
-    import 'parse/text' text {characters, match, string},
-    import 'nu/stream' stream {first, rest, foldl, map, toArray},
+    import 'parse/text' text {characters, string},
+    import 'nu/stream' stream {first, rest, isEmpty, foldl, map, toArray},
     import 'nu/gen' gen
 in {
 
@@ -82,56 +83,39 @@ var copy = \arr{length} -> {
 
 var contains = \a, x -> Array.prototype.indexOf.call(a, x) !== -1;
 
-var joinP = \p -> bind(p, always <\ join);
+var has = \o, i -> Object.hasOwnProperty.call(o, i);
 
 var toLowerCase =  Function.prototype.call.bind(String.prototype.toLowerCase);
 var toUpperCase =  Function.prototype.call.bind(String.prototype.toUpperCase);
 
 var fromCharCode = \x -> String.fromCharCode(x);
 
-var isLineTerminator = \x -> {
-    switch (x) {
-    case '\u000A':
-    case '\u000D':
-    case '\u2028':
-    case '\u2029':
-        return true;
-    default:
-        return false;
-    }
-};
+var isLineTerminator = let
+    lineTerminators = '\u2029\u2028\u000D\u000A'
+in
+    (contains, lineTerminators);
 
 var isWordChar = let
     wordChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 in
     (contains, wordChars);
 
-/* 
- ******************************************************************************/
-var fromCharCodeParser =
-    join
-    \> \x -> parseInt(x, 16)
-    \> fromCharCode
-    \> always;
-
-not = \m -> 
-    either(
-        next(attempt <| m, fail()),
-        always());
-
-var previous = parse.extract(\x -> x.previous);
-
 /* State
  ******************************************************************************/
-var State = function(input, position, userState, previous) {
-    parse.ParserState.call(this, input, position, userState);
-    this.previous = previous;
-};
-State.prototype = new parse.ParserState;
+/**
+ * Parser State used for matching.
+ * 
+ * Keeps track of the previously consumed character.
+ */
+var State = record.declare(new parse.ParserState, [
+    'input',
+    'position',
+    'userState',
+    'previous']);
 
 State.prototype.next = \x -> {
     if (!this._next) {
-        var s = new State(
+        var s = State.create(
             rest(this.input),
             this.position.increment(x),
             this.userState,
@@ -141,40 +125,42 @@ State.prototype.next = \x -> {
     return this._next;
 };
 
-State.prototype.setInput = \input ->
-    new State(input, this.position, this.userState, this.previous);
-
-State.prototype.setPosition = \position ->
-    new State(this.input, position, this.userState, this.previous);
-
-State.prototype.setUserState = \userState ->
-    new State(this.input, this.position, userState, this.previous);
-
 /* Data
  ******************************************************************************/
-var Data = function(group, groups, endIndex, captures) {
-    this.group = group;
-    this.groups = groups;
-    this.endIndex = endIndex;
-    this.captures = captures;
+var Data = record.declare(null, [
+    'groups',
+    'captures']);
+
+Data.setCapture = \s{captures}, i, x -> {
+    var c = copy(captures);
+    c[i] = x;
+    return Data.setCaptures(s, c);
 };
-
-
-Data.setGroup = \s, x ->
-    new Data(x, s.groups, s.endIndex, s.captures);
-
-Data.setEndIndex = \s, x ->
-    new Data(s.group, s.groups, x, s.captures);
-
-Data.setCaptures = \s, x ->
-    new Data(s.group, s.groups, s.endIndex, x);
 
 /* Base
  ******************************************************************************/
 var empty = always('');
 
+var fromCharCodeParser =
+    join
+    \> \x -> parseInt(x, 16)
+    \> fromCharCode
+    \> always;
+    
+var joinP = \p -> bind(p, always <\ join);
+
+var not = \m -> 
+    either(
+        next(attempt <| m, fail()),
+        always());
+
+var previous = parse.extract(\x -> x.previous);
+
 /* Assertions
  ******************************************************************************/
+var test = \p, f ->
+    bind(p, \x -> f(x) ? empty : fail());
+
 /**
  * Check the input matches a parser without consuming any input.
  */
@@ -187,9 +173,6 @@ assert = \p ->
  * Check the input does not match a parser without consuming any input.
  */
 assertNot = not \> assert;
-
-var test = \p, f ->
-    bind(p, \x -> f(x) ? empty : fail());
 
 /**
  * Match the beginning of a file. Does not consume any input.
@@ -230,74 +213,111 @@ notWordBoundary = not <| wordBoundary;
 
 /* Groups
  ******************************************************************************/
-
+/**
+ * Create a new group with name `i` for matcher `p`.
+ * 
+ * `p` is run and result is stored in the in state for later and as part of the
+ * result.
+ */
 group = \p, i ->
-    bind(getState, \s -> {
-        var captures = s.captures;
-        if (i < captures.length)
-            return always('');
-        
-        return next(
-            modifyState(\s -> {
-                var c = copy(s.captures);
-                c[i] = '';
-                return Data.setCaptures(s, c);
-            }),
-            bind(p, \x -> 
-                next(
-                    modifyState(\s -> {
-                        var c = copy(s.captures);
-                        c[i] = x;
-                        return Data.setCaptures(s, c);
-                    }),
-                    always(x))));
-    });
-    
+    next(
+        modifyState(\s -> Data.setCapture(s, i, '')),
+        bind(p, \x ->
+            next(
+                modifyState(\s -> Data.setCapture(s, i, x)),
+                always(x))));
+
+var groupReference = \g, i ->
+    bind(getState, \{captures} ->
+        has(captures, i) ? empty : g);
+
+/**
+ * Match a reference to group `i`.
+ * 
+ * If the group has already been consumed, matches the text of that captures.
+ * Otherwise, matches using the referenced group. Non existent groups always
+ * fail matching.
+ */
 backReference = \i ->
-      bind(getState, \s ->
-         let captures = s.captures in
-             (i < captures.length ?
-                 text.string(captures[i]) :
-                 let groups = s.groups in
-                     (i < groups.length ?
-                         groups[i] :
-                         fail())));
-         
-/* Parsers
+  bind(getState, \{captures, groups} ->
+     has(captures, i) ?
+         text.string(captures[i]) :
+         (groups[i] ? groupReference(groups[i], i) : fail()));
+
+/* Character Matchers
  ******************************************************************************/
 /**
- * Match a single character
+ * Match a single character.
  */
 character = text.character;
 
 /**
- * Match a single character case insensitively
+ * Match a single character case insensitively.
  */
-characteri = \[c] ->
-    text.characters(toLowerCase(c) + toUpperCase(c));
+characteri = \c ->
+    either(
+        character(toLowerCase(c)),
+        character(toUpperCase(c)));
 
 /**
  * Match a character in a range.
  */
-characterRange = \start, end ->
-    (gen.range(start.charCodeAt(0), end.charCodeAt(0) + 1, 1)
-        |> (map, fromCharCode)
-        |> join
-        |> text.characters);
+characterRange = let
+    range = \start, end ->
+        gen.range(start.charCodeAt(0), end.charCodeAt(0) + 1, 1)
+in
+    range
+        \>> (map, fromCharCode)
+        \>> join
+        \>> text.characters;
 
 /**
  * Match a character in a range case insensitively.
  */
-characterRangei = \[b], [c]->
+characterRangei = \b, c ->
     either(
         characterRange(toLowerCase(b), toLowerCase(c)),
         characterRange(toUpperCase(b), toUpperCase(c)));
 
 /**
- * Match any character expect line terminators.
+ * Match any character expect a line terminator.
  */
 anyCharacter = token((!) <\ isLineTerminator);
 
+/* Character Class Matchers
+ ******************************************************************************/
+/**
+ * Match any digit character.
+ */
+digit = characterRange('0', '9');
+
+/**
+ * Match any character except a digit.
+ */
+nonDigit = not <| digit;
+
+/**
+ * Match any space character
+ */
+space = text.characters("\u0009\u000b\u000c\u0020\u00a0\ufeff\u000a\u000d\u2028\u2029");
+
+/**
+ * Match any character except a space.
+ */
+nonSpace = not <| space;
+
+/**
+ * Match any word character.
+ */
+word = text.characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_");
+
+/**
+ * Match any non word character.
+ */
+nonWord = not <| word;
+
+/* Parsers
+ ******************************************************************************/
 /**
  * Match the first of 1 or more patterns.
  * 
@@ -312,54 +332,71 @@ choice = (map, attempt)
  */
 choicea = args \>> parse.choicea;
 
-/* Character Classes
- ******************************************************************************/
-digit = characterRange('0', '9');
-
-notDigit = not <| digit;
-
-space = text.characters("\u0009\u000b\u000c\u0020\u00a0\ufeff\u000a\u000d\u2028\u2029");
-
-notSpace = not <| space;
-
-word = text.characters("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_");
-
-notWord = not <| word;
-
-/* Quantifiers
- ******************************************************************************/
 sequence = toArray
     \> parse.enumerationa
     \> joinP;
 
-between = joinP <<\ lang.betweenTimes;
-
+/* Quantifiers
+ ******************************************************************************/
 /**
+ * Match `p` at most `max` times.
+ * 
+ * Unlike the regular `parse.js` parsers, this is locally non-greedy but will
+ * attempt to consume as little input as possible to make the entire parsing
+ * valid.
+ * 
  * @TODO: pretty damn ugly. 
  */
 atMost = \max, p ->
     (max === 0 ? always(stream.end) :
         \state, m, cok, cerr, eok, eerr -> 
             let r = parse.trampoline <| eok(stream.end, state, m) in
-                (r ? eok(stream.end, state, m) :
+                (r ? r :
                     parse.cons(p, atMost(max, p))(state, m, cok, cerr, eok, eerr)));
 
-atLeast = joinP <<\ lang.times;
+/**
+ * Greedily match a parser between `min` and `max` times.
+ */
+between = lang.betweenTimes \>> joinP;
 
+/**
+ * Non-Greedily match a parser between `min` and `max` times.
+ * 
+ * @see atMost for description of how non-greedy matching works.
+ */
 betweenNonGreedy = joinP <<\ \min, max, p ->
     parse.append(
         lang.times(min, p),
         atMost(max - min, p));
 
-
 /* Running
  ******************************************************************************/
-exec = \pattern, input ->
+matchStream = \pattern, input ->
     parse.parseState(
         pattern.pattern,
-        new State(stream.from(input), parse.Position.initial, new Data(0, pattern.groups, null, []), null),
-        \x, s -> s.userState.captures,
+        State.create(input, parse.Position.initial, new Data(pattern.groups, []), null),
+        \_, s -> s.userState.captures,
         \ -> null);
 
+match = \pattern, input ->
+    matchStream(
+        pattern,
+        stream.from(input));
 
+execStream = \pattern, input -> {
+    var result;
+    var feed = input;
+    do {
+        result = matchStream(pattern, feed);
+        if (isEmpty(feed))
+            break;
+        feed = rest(feed);
+    } while (!result);
+    return result;
+};
+
+exec = \pattern, input ->
+    execStream(
+        pattern,
+        stream.from(input));
 }

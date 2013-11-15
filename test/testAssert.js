@@ -10,11 +10,11 @@ function(re,
                 var p = re.evaluate("a(?=b)");
                 
                 assert.deepEqual(
-                    match.exec(p, 'ab'),
+                    match.match(p, 'ab'),
                     ['a']);
                 
                 assert.deepEqual(
-                    match.exec(p, 'ax'),
+                    match.match(p, 'ax'),
                     null);
             }],
             ["Consumes Nothing",
@@ -22,8 +22,16 @@ function(re,
                 var p = re.evaluate("a(?=b)b+");
                 
                 assert.deepEqual(
-                    match.exec(p, 'abb'),
+                    match.match(p, 'abb'),
                     ['abb']);
+            }],
+            ["With Group",
+            function(){
+                var p = re.evaluate("(?=(a+))");
+                
+                assert.deepEqual(
+                    match.exec(p, 'baaabac'),
+                    ['', 'aaa']);
             }]
         ],
     };

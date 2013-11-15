@@ -13,6 +13,7 @@ package (
 // Evaluation
     evaluate)
 with
+    import 'amulet/record' record,
     import 'parse/parse' parse {
         always,
         attempt,
@@ -33,23 +34,11 @@ with
         test,
         token},
     import 'parse/lang' {between, sepBy, sepEndBy, times, then},
-    import 'parse/text' {character, characters, string},
+    import 'parse/text' text {character, characters, string},
     import 'nu/stream' {foldl, map, toArray},
     import 'nu/gen' gen,
     import 'parse_re/match' match
 in {
-
-var identity = \x -> x;
-
-var constant = \x -> \() -> x;
-
-var join = (foldl, (+), '');
-
-var fromCharCodeParser =
-    join
-    \> \x -> parseInt(x, 16)
-    \> String.fromCharCode
-    \> always;
 
 /* Forward
  ******************************************************************************/
@@ -57,14 +46,32 @@ var disjunction = \args(...) -> disjunction.apply(null, args);
 
 var classRanges = \args(...) -> classRanges.apply(null, args);
 
-/* Data
+/*
  ******************************************************************************/
+var identity = \x -> x;
+
+var constant = \x -> \() -> x;
+
+var join = (foldl, (+), '');
+
 var copy = \arr{length} -> {
     var out = [];
     for (var i = 0; i < length; i = i + 1)
         out[i] = arr[i];
     return out;
 };
+
+var fromCharCodeParser =
+    join
+    \> \x -> parseInt(x, 16)
+    \> String.fromCharCode
+    \> always;
+
+/* Data
+ ******************************************************************************/
+var Data = record.declare(null, [
+    'flags',
+    'groups']);
 
 var addGroup = \a, g -> {
     var c = copy(a);
@@ -78,21 +85,12 @@ var setGroup = \a, i, g -> {
     return c;
 };
 
-
-var Data = function(flags, groups) {
-    this.flags = flags;
-    this.groups = groups;
-};
-
 Data.addGroup = \s, g ->
-    new Data(
-        s.flags,
-        addGroup(s.groups, g));
-    
+    s.setGroups(addGroup(s.groups, g));
+
 Data.setGroup = \s, i, g ->
-    new Data(
-        s.flags,
-        setGroup(s.groups, i, g));
+    s.setGroups(setGroup(s.groups, i, g));
+
 
 /* Escapes
  ******************************************************************************/
@@ -118,6 +116,12 @@ var classChar = \c ->
                 match.characteri(x) :
                 match.character(x))));
 
+var matchCharacterRange = \from, to ->
+    bind(getState, \s -> 
+        always(s.flags & RE_I ?
+            match.characterRangei(from, to) :
+            match.characterRange(from, to)));
+    
 var matchBof = bind(getState, \s -> 
     always(s.flags & RE_M ?
         match.bol :
@@ -129,10 +133,10 @@ var matchEof = bind(getState, \s ->
         match.eof));
 
 var group = \p ->
-    bind(parse.getState, \s ->
-        let i = s.groups.length in
-            next(
-                parse.modifyState(\s -> Data.addGroup(s, null)),
+    next(
+        parse.modifyState(\s -> Data.addGroup(s, null)),
+        bind(parse.getState, \s ->
+            let i = s.groups.length - 1 in
                 bind(p, \p ->
                     let impl = match.group(p, i) in
                         parse.next(
@@ -148,15 +152,21 @@ var hexEscapeSequence = next(
     bind(times(2, hexDigit),
         fromCharCodeParser));
 
+/**
+ * 
+ */
 var unicodeEscapeSequence = next(
     character('u'),
     bind(times(4, hexDigit),
         fromCharCodeParser));
 
+/**
+ * 
+ */
 var decimalEscape = decimalIntegerLiteral;
 
 /**
- * 
+ * Escapes representing a matcher for a class of characters.
  */
 var characterClassEscape = choice(
     next(
@@ -165,7 +175,7 @@ var characterClassEscape = choice(
     
     next(
         character('D'),
-        always(match.notDigit)),
+        always(match.nonDigit)),
     
     next(
         character('s'),
@@ -173,7 +183,7 @@ var characterClassEscape = choice(
     
     next(
         character('S'),
-        always(match.notSpace)),
+        always(match.nonSpace)),
     
     next(
         character('d'),
@@ -181,9 +191,17 @@ var characterClassEscape = choice(
         
     next(
         character('D'),
-        always(match.notWord)));
+        always(match.nonWord)));
 
-var identityEscape = parse.anyToken; //TODO
+
+var identifierPart = choice(
+    text.character,
+    characters('$_'),
+    text.digit);
+
+var identityEscape = either(
+    characters('\u200C\u200D'),
+    token((!) <\ (test, identifierPart)));
 
 /**
  * 
@@ -194,7 +212,7 @@ var controlLetter = bind(
         i = x.charCodeAt(0),
         j = i % 32
     in
-        always(character(String.fromCharCode(j))));
+        always(reChar(String.fromCharCode(j))));
 
 var controlEscape = let
     map = \from, to ->
@@ -208,7 +226,7 @@ in
         map('v', '\u000B'),
         map('f', '\u000C'),
         map('r', '\u000D'));
-        
+
 var characterEscape = choice(
     controlEscape,
     next(
@@ -224,11 +242,9 @@ var classEscape = choice(
     characterEscape,
     characterClassEscape);
 
-
-
 /* Character Classes
  ******************************************************************************/
-var classAtomNoDash = choice(
+var classAtomNoDash = either(
     token((!) <\ (test, characters('\\-]'))),
     next(
         character('\\'),
@@ -251,7 +267,7 @@ var nonEmptyClassRangesNoDash = rec(\nonEmptyClassRangesNoDash -> let
                 classAtomNoDash,
                 character('-')),
             classAtom),
-        always <<\ match.characterRange)
+        matchCharacterRange)
 in
     choice(
         attempt <| bind(
@@ -276,7 +292,7 @@ var nonEmptyClassRanges = let
                 classAtom,
                 character('-')),
             classAtom),
-        always <<\ match.characterRange)
+        matchCharacterRange)
 in
     choice(
         attempt <| bind(
@@ -318,32 +334,16 @@ var atomEscape = choice(
         always <\ match.backReference),
         
     classChar(characterEscape),
+    
     characterClassEscape);
 
 /**
  * 
  */
-var patternCharacter = token(\tok -> {
-    switch (tok) {
-        case '^':
-        case '$':
-        case '\\':
-        case '.':
-        case '*':
-        case '+':
-        case '?':
-        case '(':
-        case ')':
-        case '[':
-        case ']':
-        case '{':
-        case '}':
-        case '|':
-            return false;
-        default:
-            return true;
-    }
-});
+var patternCharacter = let
+    reserved = '^$\\.*+?()[]{}|'
+in
+    token((!) <\ (test, characters(reserved)));
 
 /**
  * 
@@ -407,6 +407,8 @@ var quantifier = binds(
             (match.betweenNonGreedy, min, max) :
             (match.between, min, max)));
 
+/* Assertion
+ ******************************************************************************/
 /**
  * 
  */
@@ -434,6 +436,8 @@ var assertion = choice(
                 next(string('?!'), always(match.assertNot))),
             \x -> bind(disjunction, always <\ x))));
 
+/* Pattern
+ ******************************************************************************/
 /**
  * 
  */
@@ -478,7 +482,10 @@ evaluate = \input, flags ->
         pattern,
         input,
         new Data((flags || RE_NONE), []),
-        \x, s -> ({'pattern': x, 'groups': s.userState.groups}),
+        \_, {'userState':{groups}} -> ({
+            'pattern': groups[0],
+            'groups': groups
+        }),
         \x -> { throw x; });
 
 }

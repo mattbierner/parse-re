@@ -99,6 +99,23 @@ function(re,
                     ['abc', 'a', 'b', 'c']);
                 
             }],
+            ["Back Reference to self is nop",
+            function(){
+                var p = re.evaluate("(.\\1.)");
+                
+                assert.deepEqual(
+                    match.exec(p, 'ab'),
+                    ['ab', 'ab']);
+            }],
+            
+            ["Group Quantifier",
+            function(){
+                var p = re.evaluate("(.)+");
+                
+                assert.deepEqual(
+                    match.exec(p, 'ab'),
+                    ['ab', 'b']);
+            }],
         ],
     };
 });

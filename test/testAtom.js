@@ -15,6 +15,16 @@ function(re,
                 var r2 = match.exec(p, 'aX');
                 assert.deepEqual(r2, ['a']);
             }],
+            ["Exec Atom",
+            function(){
+                var p = re.evaluate("a");
+                
+                var r = match.exec(p, 'bba');
+                assert.deepEqual(r, ['a']);
+                
+                var r2 = match.exec(p, 'aX');
+                assert.deepEqual(r2, ['a']);
+            }],
             ["Simple Atom I",
             function(){
                 var p = re.evaluate("a", re.RE_I);

@@ -125,6 +125,39 @@ function(re,
                     match.exec(p, 'A'),
                     null);
             }],
+             
+            ["Simple range I",
+            function(){
+                var p = re.evaluate("[a-c]", re.RE_I);
+                
+                assert.deepEqual(
+                    match.exec(p, 'a'),
+                    ['a']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'b'),
+                    ['b']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'c'),
+                    ['c']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'd'),
+                    null);
+                
+                assert.deepEqual(
+                    match.exec(p, 'A'),
+                    ['A']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'C'),
+                    ['C']);
+                
+                assert.deepEqual(
+                    match.exec(p, 'D'),
+                    null);
+            }],
             ["Being dash range",
             function(){
                 var p = re.evaluate("[--/a]");

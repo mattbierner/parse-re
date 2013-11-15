@@ -7,3 +7,6 @@
 [submodule "dependencies/seshat"]
 	path = dependencies/seshat
 	url = git@github.com:mattbierner/seshat.git
+[submodule "dependencies/amulet"]
+	path = dependencies/amulet
+	url = git@github.com:mattbierner/amulet.git

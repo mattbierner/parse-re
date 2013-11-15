@@ -10,11 +10,11 @@ function(re,
                 var p = re.evaluate("$");
                 
                 assert.deepEqual(
-                    match.exec(p, ''),
+                    match.match(p, ''),
                     ['']);
                 
                 assert.deepEqual(
-                    match.exec(p, 'abc'),
+                    match.match(p, 'abc'),
                     null);
             }],
             ["Fail",
@@ -22,15 +22,15 @@ function(re,
                 var p = re.evaluate("a$");
                 
                 assert.deepEqual(
-                    match.exec(p, ''),
+                    match.match(p, ''),
                     null);
                 
                 assert.deepEqual(
-                    match.exec(p, 'a'),
+                    match.match(p, 'a'),
                     ['a']);
                 
                 assert.deepEqual(
-                    match.exec(p, 'ab'),
+                    match.match(p, 'ab'),
                     null);
             }],
             ["MultiLine",
@@ -38,7 +38,7 @@ function(re,
                 var p = re.evaluate("a$[^]a", re.RE_M);
                 
                 assert.deepEqual(
-                    match.exec(p, 'a\na'),
+                    match.match(p, 'a\na'),
                     ['a\na']);
             }]
         ],
