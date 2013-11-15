@@ -233,9 +233,9 @@ group = \p, i ->
 /**
  * Match a reference to group `i`.
  * 
- * If the group has already been consumed, matches the text of that captures.
- * Otherwise, matches using the referenced group. Non existent groups always
- * fail matching.
+ * If the group has already been consumed, matches the text of that capture.
+ * Otherwise, matches using the referenced group but does not advance the input
+ * and returns an empty string. Non existent groups always fail.
  */
 backReference = \i ->
   bind(getState, \{captures, groups} ->

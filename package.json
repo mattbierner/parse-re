@@ -1,19 +1,17 @@
 {
-  "name": "parse.js",
-  "version": "15.1.0",
-  "description": "Combinatory Parsing Library",
-  "main": "lib/parse.js",
+  "name": "parse-re",
+  "version": "0.0.0",
+  "description": "parse.js Regular Expression Parsers and Engine",
+  "main": "dist/re.js",
   "repository": {
     "type": "git",
-    "url": "git://github.com/mattbierner/parse.js.git"
+    "url": "git://github.com/mattbierner/parse-re.git"
   },
   "keywords": [
     "parse",
     "parser",
-    "combinatorial",
-    "combinatory",
-    "combinatory parsing",
-    "functional"
+    "regexp",
+    "regular expression"
   ],
   "author": "Matt Bierner",
   "license": "MIT"
