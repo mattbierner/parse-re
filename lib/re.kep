@@ -34,7 +34,7 @@ with
         test,
         token},
     import 'parse/lang' {between, sepBy, sepEndBy, times, then},
-    import 'parse/text' {anyChar, digit, character, characters, string},
+    import 'parse/text' {character, characters, string},
     import 'nu/stream' stream {foldl},
     import 'nu/gen' gen,
     import 'parse_re/match' match
@@ -46,11 +46,9 @@ var disjunction = \args(...) -> disjunction.apply(null, args);
 
 var classRanges = \args(...) -> classRanges.apply(null, args);
 
-/*
+/* 
  ******************************************************************************/
 var identity = \x -> x;
-
-var constant = \x -> \() -> x;
 
 var join = (foldl, (+), '');
 
@@ -61,9 +59,10 @@ var copy = \arr{length} -> {
     return out;
 };
 
+/* Helper Parsers
+ ******************************************************************************/
 var fromCharCodeP = \p ->
-    bind(p,
-        join
+    bind(p, join
         \> \x -> parseInt(x, 16)
         \> String.fromCharCode
         \> always);
@@ -147,16 +146,23 @@ var matchEof = bind(getState, \s ->
         match.eol :
         match.eof));
 
-var group = \p ->
-    next(
-        modifyState(\s -> Data.addGroup(s, null)),
-        bind(getState, \s ->
-            let i = s.groups.length - 1 in
-                bind(p, \p ->
-                    let impl = match.group(p, i) in
-                        parse.next(
-                            modifyState(\s -> Data.setGroup(s, i, impl)),
-                            always(impl)))));
+/**
+ * Create a group matcher for the result of `p`.
+ */
+var matchGroup = let
+    addGroup = \g -> modifyState(\s -> Data.addGroup(s, g)),
+    setGroup = \i, g -> modifyState(\s -> Data.setGroup(s, i, g))
+in
+    \p ->
+        next(
+            addGroup(null),
+            bind(getState, \{groups} ->
+                let i = groups.length - 1 in
+                    bind(p, \p ->
+                        let impl = match.group(p, i) in
+                            parse.next(
+                                setGroup(i, impl),
+                                always(impl)))));
 
 /* General Parsers
  ******************************************************************************/
@@ -172,7 +178,7 @@ var decimalIntegerLiteral = bind(
 
 var identifierPart = choice(
     characters('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789$_'),
-    digit);
+    decimalDigit);
 
 /* Base Escapes
  ******************************************************************************/
@@ -403,9 +409,9 @@ var atomEscape = choice(
  * meaning in regular expressions.
  */
 var patternCharacter = let
-    reserved = '^$\\.*+?()[]{}|'
+    reserved = characters('^$\\.*+?()[]{}|')
 in
-    matchCharacterFrom(token((!) <\ (test, characters(reserved))));
+    matchCharacterFrom(notToken(reserved));
 
 /**
  * Regular expression consuming matching unit.
@@ -428,7 +434,7 @@ var atom = choice(
             next(
                 string('?:'),
                 disjunction),
-            group(disjunction))));
+            matchGroup(disjunction))));
 
 /* Assertion
  ******************************************************************************/
@@ -525,7 +531,7 @@ disjunction = bind(
 /**
  * Top level parser for a regular expression.
  */
-pattern = group(disjunction);
+pattern = matchGroup(disjunction);
 
 /* Evaluation
  ******************************************************************************/

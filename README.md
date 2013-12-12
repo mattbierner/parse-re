@@ -23,7 +23,7 @@ The implementation is in functional style Javascript.
 
 
 [parse.js]: https://github.com/mattbierner/parse.js
-[khepri]: https://github.com/mattbierner/khepri
 [nu]: https://github.com/mattbierner/nu
 [seshat]: https://github.com/mattbierner/seshat
 [amulet]: https://github.com/mattbierner/amulet
+[khepri]: https://github.com/mattbierner/khepri

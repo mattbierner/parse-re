@@ -103,30 +103,23 @@ var isWordChar = let
 in
     (contains, wordChars);
 
-/* State
+/* Position
  ******************************************************************************/
-/**
- * Parser State used for matching.
- * 
- * Keeps track of the previously consumed character.
- */
-var State = record.declare(new parse.ParserState, [
-    'input',
-    'position',
-    'userState',
-    'previous']);
-
-State.prototype.next = \x -> {
-    if (!this._next) {
-        var s = State.create(
-            rest(this.input),
-            this.position.increment(x),
-            this.userState,
-            x);
-        this._next = \_, m, cok -> cok(x, s, m);
-    }
-    return this._next;
+var Position = function(position, previous) {
+    this.position = position;
+    this.previous = previous;
 };
+Position.prototype = new parse.Position;
+
+Position.initial = new Position(parse.Position.initial, null);
+
+Position.prototype.increment = \tok->
+    new Position(
+        this.position.increment(tok),
+        tok);
+
+Position.prototype.compare = \pos ->
+    this.position.compare(pos.position);
 
 /* Data
  ******************************************************************************/
@@ -154,7 +147,9 @@ var fromCharCodeParser = join
 
 var joinP = \p -> bind(p, always <\ join);
 
-var previous = parse.extract(\x -> x.previous);
+var getPosition = bind(parse.getPosition, \pos -> always(pos.position));
+
+var previous = parse.extract(\x -> x.position.previous);
 
 var setCapture = \i, x ->
     modifyState(\s -> Data.setCapture(s, i, x));
@@ -185,7 +180,7 @@ assertNot = not \> assert;
 /**
  * Match the beginning of a file. Does not consume any input.
  */
-bof = test(parse.getPosition, \pos -> pos.index === 0);
+bof = test(getPosition, \pos -> pos.index === 0);
 
 /**
  * Match the beginning of a line. Does not consume any input.
@@ -388,11 +383,10 @@ betweenNonGreedy = joinP <<\ \min, max, p ->
 matchStream = \{pattern, groups}, input ->
     parse.parseState(
         pattern,
-        State.create(
+        new parse.ParserState(
             input,
-            parse.Position.initial,
-            Data.create(groups, new Array(groups.length)),
-            null),
+            Position.initial,
+            Data.create(groups, new Array(groups.length))),
         \_, s -> s.userState.captures,
         \ -> null);
 
